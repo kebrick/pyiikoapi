@@ -11,13 +11,14 @@ import json
 
 class AuthBiz:
     """
-    Если не был присвоен костомный session то по стандарту header будет равняться:
+    Если не был присвоен кастомный session то по стандарту header будет равняться:
     {
     'Content-type': 'application/json',
     'Accept': 'application/json',
     'Content-Encoding': 'utf-8'
     }
     """
+    DEFAULT_TIMEOUT = "00%3A02%3A00"
 
     def __init__(self, login: str, password: str, org: str, session: requests.Session = None):
         self.__session = requests.Session()
@@ -44,7 +45,7 @@ class AuthBiz:
         try:
 
             if time_token <= fifteen_minutes_ago:
-                print(f"Update token: {self.get_token()}")
+                print(f"Update token: {self.access_token()}")
                 return True
             else:
                 return False
@@ -52,7 +53,7 @@ class AuthBiz:
             raise CheckTimeToken(
                 self.__class__.__qualname__,
                 self.check_token_time.__name__,
-                f"[ERROR] Не запрошен Token и не присвоен обьект типа datetime.datetime")
+                f"[ERROR] Не запрошен Token и не присвоен объект типа datetime.datetime")
 
     @property
     def session_s(self) -> requests.Session:
@@ -66,7 +67,7 @@ class AuthBiz:
             raise SetSession(
                 self.__class__.__qualname__,
                 self.session_s.__name__,
-                f"[ERROR] Не присвоен обьект типа requests.Session")
+                f"[ERROR] Не присвоен объект типа requests.Session")
         else:
             self.__session = session
 
@@ -98,7 +99,7 @@ class AuthBiz:
     def base_url(self, value: str):
         self.__base_url = value
 
-    def get_token(self) -> str:
+    def access_token(self) -> str:
         """Получить маркер доступа"""
         try:
             result = self.session_s.get(
@@ -109,7 +110,7 @@ class AuthBiz:
 
         except requests.exceptions.RequestException as err:
             raise TokenException(self.__class__.__qualname__,
-                                 self.get_token.__name__,
+                                 self.access_token.__name__,
                                  f"[ERROR] Не удалось получить маркер доступа: \n{err}")
 
 
@@ -119,23 +120,21 @@ class Orders(AuthBiz):
     Все методы возвращают чистый json
     """
 
-    def get_courier_orders(self, courierId: str, **params: dict) -> json:
+    def get_courier_orders(self, **params) -> json:
         """
         Активные заказы курьера
 
-        :param courierId: id courier
-        :type courierId: :obj:`str`
-        :param params: {"request_timeout" : "00%3A02%3A00"}
+        :param params: {"courier": "Идентификатор курьера", "request_timeout" : "00%3A02%3A00"}
+        :return: DeliveryOrdersResponse Информация о заказах
         """
 
         self.check_token_time()
         try:
             result = self.session_s.get(
                 f'{self.base_url}/api/0/orders/get_courier_orders?access_token={self.token}'
-                f'&organization={self.org}&courier={courierId}',
-                # f'&request_timeout=00%3A02%3A00'
+                f'&organization={self.org}',
                 params=params)
-            return result.json()  # ['deliveryOrders']
+            return result.json()
 
         except requests.exceptions.RequestException as err:
             raise GetException(self.__class__.__qualname__,
@@ -144,10 +143,27 @@ class Orders(AuthBiz):
 
     def delivery_orders(self, **params) -> json:
         """
-        Все заказы
-        :param params: {"dateFrom": "","dateTo" : "", "deliveryStatus" : "", "deliveryTerminalId" : "", "request_timeout" : "00%3A02%3A00"}
+        Получение информации о всех доставках в заданном временном интервале.
 
+        :param params: {"dateFrom": "","dateTo" : "", "deliveryStatus" : "", "deliveryTerminalId" : "","request_timeout" : "00%3A02%3A00"}
+        "dateFrom" : string : Дата начала интервала (включительно).
+        "dateTo" : string : Дата окончания интервала (включительно).
+        "deliveryStatus" : string : Статус доставки (регистронезависимый).
+        Должно принимать одно из следующих значений:
+        ● NEW
+        ● WAITING
+        ● ON_WAY
+        ● CLOSED
+        ● CANCELLED
+        ● DELIVERED
+        ● UNCONFIRMED
+        "deliveryTerminalId" : string : Идентификатор терминала доставки.
+        "requestTimeout" : string : Таймаут для выполнения запроса.
+        :return: DeliveryOrdersResponse Информация о заказах
         """
+        # /api/0/orders/deliveryOrders?access_token={accessToken}&organization={organizationId}
+        # &dateFrom={dateFrom}&dateTo={dateTo}&deliveryStatus={deliveryStatus}
+        # &deliveryTerminalId={deliveryTerminalId}&request_timeout={requestTimeout}
         self.check_token_time()
         try:
             result = self.session_s.get(
@@ -368,6 +384,11 @@ class Notices(AuthBiz):
 
 
 class RMSSettings(AuthBiz):
+    """
+    Получение списка протоколов заданной организции
+    Возвращает список поддерживаемых протоколов
+    """
+
     def supported_protocols(self) -> json:
         """
         Получение списка протоколов заданной организции
@@ -378,7 +399,8 @@ class RMSSettings(AuthBiz):
         self.check_token_time()
         try:
             result = self.session_s.get(
-                f'{self.base_url}/api/0/rmsSettings/supportedProtocols?access_token={self.token}&organization={self.org}')
+                f'{self.base_url}/api/0/rmsSettings/supportedProtocols?access_token={self.token}'
+                f'&organization={self.org}')
             return result.json()
 
         except requests.exceptions.RequestException as err:
@@ -396,7 +418,8 @@ class RMSSettings(AuthBiz):
         self.check_token_time()
         try:
             result = self.session_s.get(
-                f'{self.base_url}/api/0/rmsSettings/supportedProtocols?access_token={self.token}&organization={self.org}')
+                f'{self.base_url}/api/0/rmsSettings/supportedProtocols?access_token={self.token}'
+                f'&organization={self.org}')
             return result.json()
 
         except requests.exceptions.RequestException as err:
@@ -408,64 +431,138 @@ class RMSSettings(AuthBiz):
 
     def get_employees(self) -> json:
         """
+        Получение списка сотрудников организации
+
         :return : OrganizationUser: Список всех сотрудников организации Response
         """
         # /api/0/rmsSettings/getEmployees?access_token={accessToken}&organization={organizationId}
-        pass
-
-    def get_restaurant_sections(self) -> json:
-        """
-        :return :RestaurantSectionsResponse :Список всех залов организации
-        """
-        # /api/0/rmsSettings/getRestaurantSections?access_token={accessToken}&organization={organizationId}
-        pass
-
-    def get_orders_types(self) -> json:
-        """
-        :return :OrderTypesResponse Справочник типов заказов
-        """
-        # /api/0/rmsSettings/getOrderTypes?access_token={accessToken}&organization={organizationId}
-        pass
-
-    def get_payment_types(self) -> json:
-        """
-        :return PaymentType[] Внешние типы оплат
-        """
-        # /api/0/rmsSettings/getPaymentTypes?access_token={accessToken}&organization={organizationId}
-        pass
-
-    def get_marketing_sources(self):
-        """
-        :return: MarketingSourceInfo[] Маркетинговые источники
-        """
-        # /api/0/rmsSettings/getMarketingSources?access_token={accessToken}&organization={organizationId}
-        pass
-
-    def get_couriers(self) -> json:
-        """
-        All couriers.
-
-        :return: deliveryOrders: struct
-        :rtype: json: :obj:`json`
-        """
         self.check_token_time()
         try:
             result = self.session_s.get(
-                f'{self.base_url}/api/0/rmsSettings/getCouriers?access_token={self.token}'
+                f'{self.base_url}/api/0/rmsSettings/getEmployees?access_token={self.token}&organization={self.org}')
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise GetException(
+                self.__class__.__qualname__,
+                self.get_employees.__name__,
+                f"[ERROR] Не удалось получить список сотрудников организации\n{err}"
+            )
+
+    def get_restaurant_sections(self) -> json:
+        """
+        Получение списка залов организации
+
+        :return :RestaurantSectionsResponse :Список всех залов организации
+        """
+        # /api/0/rmsSettings/getRestaurantSections?access_token={accessToken}&organization={organizationId}
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/rmsSettings/getRestaurantSections?access_token={self.token}'
                 f'&organization={self.org}')
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise GetException(
+                self.__class__.__qualname__,
+                self.get_restaurant_sections.__name__,
+                f"[ERROR] Не удалось получить список залов организации\n{err}"
+            )
+
+    def get_orders_types(self) -> json:
+        """
+        Получение списка допустимых типов заказов
+
+        :return :OrderTypesResponse Справочник типов заказов
+        """
+        # /api/0/rmsSettings/getOrderTypes?access_token={accessToken}&organization={organizationId}
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/rmsSettings/getOrderTypes?access_token={self.token}&organization={self.org}')
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise GetException(
+                self.__class__.__qualname__,
+                self.get_orders_types.__name__,
+                f"[ERROR] Не удалось получить список допустимых типов заказов\n{err}"
+            )
+
+    def get_payment_types(self) -> json:
+        """
+        Получить список типов оплат
+
+        :return PaymentType[] Внешние типы оплат
+        """
+        # /api/0/rmsSettings/getPaymentTypes?access_token={accessToken}&organization={organizationId}
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/rmsSettings/getPaymentTypes?access_token={self.token}&organization={self.org}')
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise GetException(
+                self.__class__.__qualname__,
+                self.get_payment_types.__name__,
+                f"[ERROR] Не удалось получить список типов оплат\n{err}"
+            )
+
+    def get_marketing_sources(self):
+        """
+        Получить список маркетинговых источников
+
+        :return: MarketingSourceInfo[] Маркетинговые источники
+        """
+        # /api/0/rmsSettings/getMarketingSources?access_token={accessToken}&organization={organizationId}
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/rmsSettings/getMarketingSources?access_token={self.token}'
+                f'&organization={self.org}')
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise GetException(
+                self.__class__.__qualname__,
+                self.get_marketing_sources.__name__,
+                f"[ERROR] Не удалось получить список типов оплат\n{err}"
+            )
+
+    def get_couriers(self) -> json:
+        """
+        Получить список курьеров организации
+
+        :return: deliveryOrders:  Список курьеров организации
+        :rtype: json: :obj:`json`
+        """
+        # /api/0/rmsSettings/getCouriers?access_token={accessToken}&organization={organizationId}
+
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/rmsSettings/getCouriers?access_token={self.token}&organization={self.org}')
             return result.json()  # ['users']
 
         except requests.exceptions.RequestException as err:
             raise GetException(
                 self.__class__.__qualname__,
                 self.get_couriers.__name__,
-                f"[ERROR] Не удалось получить список курьеров\n{err}"
+                f"[ERROR] Не удалось получить список курьеров организации\n{err}"
             )
 
 
 class StopLists(AuthBiz):
-    def get_delivery_stop_list(self):
+    """
+    Все методы этого сервиса работают по протоколу https.
+    """
+
+    def get_delivery_stop_list(self) -> json:
         """
+        Получить стоп-лист по сети ресторанов
+
         Запрос возвращает список продуктов, находящихся в стоп-листе.
         В случае запроса на колл-центра в результате могут находяится позиции стоп-листа из
         других ресторанов.
@@ -473,7 +570,19 @@ class StopLists(AuthBiz):
         :return: StopListAtOrganization[] Элементы стоп-листа; string[] Идентификаторы организаций, которые не зарегистрированы в iikoBiz.
         """
         # /api/0/stopLists/getDeliveryStopList?access_token={accessToken}&organization={organizationId}
-        pass
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/stopLists/getDeliveryStopList?access_token={self.token}'
+                f'&organization={self.org}')
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise GetException(
+                self.__class__.__qualname__,
+                self.get_delivery_stop_list.__name__,
+                f"[ERROR] Не удалось получить стоп-лист по сети ресторанов\n{err}"
+            )
 
 
 class Mobile(AuthBiz):
@@ -481,28 +590,62 @@ class Mobile(AuthBiz):
     Мобильное приложение курьера
     """
 
-    def signin(self, **params):
+    def signin(self, mobile_login_request_dto: dict, **params, ) -> json:
         """
         Запрос логина курьера доставки на удаленный РМС сервер
 
-        :param params:  Сущность, описывающая запрос на логин
+        :param mobile_login_request_dto: Сущность, описывающая запрос на логин
+        :param params: словарь с ключом и значением  {"request_timeout":"00%3A02%3A00"}
         :return: MobileLoginResult DTO, описывающий результат логина (есть ли Dto ошибки), сообщает также версию сервера
         :rtype:obj:`json`
         """
         # /api/0/mobile/signin?access_token={accessToken}&request_timeout={requestTimeout}&organization={organizationId}
-        pass
 
-    def sysc(self, **params):
+        self.check_token_time()
+        params += {"organization": self.org}
+        try:
+            result = self.session_s.post(
+                f'{self.base_url}/api/0/mobile/signin?access_token={self.token}',
+                params=params,
+                data=mobile_login_request_dto
+            )
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise PostException(
+                self.__class__.__qualname__,
+                self.signin.__name__,
+                f"[ERROR] Не удалось получить Запрос логина курьера доставки на удаленный РМС сервер\n{err}"
+            )
+
+    def sysc(self, send_update_dto: dict, **params) -> json:
         """
         Запрос полной синхронизации мобильного приложения и сервера доставок
         Отсылает изменения в доставках (статус, проблема) и сохраненные gps координаты курьера.
 
-        :param params: Изменения доставок на мобильном приложении; список gps координат курьера
+        :param send_update_dto: Изменения доставок на мобильном приложении; список gps координат курьера
+        :param params: словарь с ключом и значением  {"request_timeout":"00%3A02%3A00"}
         :return: SyncResultDto Список актуальных доставок для данного курьера
         :rtype:obj:`json`
         """
         # /api/0/mobile/sync?access_token={accessToken}&request_timeout={requestTimeout}&organization={organizationId}
-        pass
+        self.check_token_time()
+        params += {"organization": self.org}
+        try:
+            result = self.session_s.post(
+                f'{self.base_url}/api/0/mobile/sync?access_token={self.token}',
+                params=params,
+                data=send_update_dto
+            )
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise PostException(
+                self.__class__.__qualname__,
+                self.sysc.__name__,
+                f"[ERROR] Не удалось отслать изменения в доставках (статус, проблема) и "
+                f"сохраненные gps координаты курьера.\n{err}"
+            )
 
 
 class DeliverySettings(AuthBiz):
@@ -510,7 +653,7 @@ class DeliverySettings(AuthBiz):
     Настройки доставки
     """
 
-    def delivery_discounts(self):
+    def delivery_discounts(self) -> json:
         """
         Получить список скидок, доступных для применения в доставке для заданного ресторана
 
@@ -518,9 +661,22 @@ class DeliverySettings(AuthBiz):
         :rtype:obj:`json`
         """
         # /api/0/deliverySettings/deliveryDiscounts?access_token={accessToken}&organization={organizationId}
-        pass
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/deliverySettings/deliveryDiscounts?access_token={self.token}'
+                f'&organization={self.org}', )
+            return result.json()
 
-    def get_delivery_terminals(self):
+        except requests.exceptions.RequestException as err:
+            raise GetException(
+                self.__class__.__qualname__,
+                self.delivery_discounts.__name__,
+                f"[ERROR] Не удалось получить список скидок, доступных для применения в "
+                f"доставке для заданного ресторана.\n{err}"
+            )
+
+    def get_delivery_terminals(self) -> json:
         """
         Вернуть список доставочных ресторанов, подключённых к данному ресторану
 
@@ -528,9 +684,21 @@ class DeliverySettings(AuthBiz):
         :rtype:obj:`json`
         """
         # /api/0/deliverySettings/getDeliveryTerminals?access_token={accessToken}&organization={organizationId}
-        pass
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/deliverySettings/getDeliveryTerminals?access_token={self.token}'
+                f'&organization={self.org}', )
+            return result.json()
 
-    def get_delivery_restrictions(self):
+        except requests.exceptions.RequestException as err:
+            raise GetException(
+                self.__class__.__qualname__,
+                self.get_delivery_terminals.__name__,
+                f"[ERROR] Не удалось получить список доставочных ресторанов, подключённых к данному ресторану\n{err}"
+            )
+
+    def get_delivery_restrictions(self) -> json:
         """
         Вернуть список ограничений работы ресторана/сети ресторанов
 
@@ -538,17 +706,43 @@ class DeliverySettings(AuthBiz):
         :rtype:obj:`json`
         """
         # /api/0/deliverySettings/getDeliveryRestrictions?access_token={accessToken}&organization={organizationId}
-        pass
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/deliverySettings/getDeliveryRestrictions?access_token={self.token}'
+                f'&organization={self.org}', )
+            return result.json()
 
-    def get_survey_items(self):
+        except requests.exceptions.RequestException as err:
+            raise GetException(
+                self.__class__.__qualname__,
+                self.get_delivery_restrictions.__name__,
+                f"[ERROR] Не удалось получить список доставочных ресторанов, подключённых к данному ресторану\n{err}"
+            )
+
+    def get_survey_items(self, **params):
         """
         Вернуть вопросы для отзыва клиента о сделанной доставке
 
+        :param params: {"orderId" : "Идентификатор заказа"}
         :return:SurveyItem[] Список вопросов для отзыва клиента о сделанной доставке
         :rtype:obj:`json`
         """
         # /api/0/deliverySettings/getSurveyItems?access_token={accessToken}&organization={organizationId}&orderId={orderId}
-        pass
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/deliverySettings/getSurveyItems?access_token={self.token}'
+                f'&organization={self.org}',
+                params=params, )
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise GetException(
+                self.__class__.__qualname__,
+                self.get_survey_items.__name__,
+                f"[ERROR] Не удалось получить вопросы для отзыва клиента о сделанной доставке\n{err}"
+            )
 
     def get_delivery_courier_mobile_settings(self):
         """
@@ -559,7 +753,20 @@ class DeliverySettings(AuthBiz):
         :rtype:obj:`json`
         """
         # /api/0/deliverySettings/getDeliveryCourierMobileSettings?access_token={accessToken}&organization={organizationId}
-        pass
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/deliverySettings/getDeliveryCourierMobileSettings?access_token={self.token}'
+                f'&organization={self.org}',)
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise GetException(
+                self.__class__.__qualname__,
+                self.get_delivery_courier_mobile_settings.__name__,
+                f"[ERROR] Не удалось получить настройки для мобильного приложения "
+                f"курьерской доставки для данного ресторана\n{err}"
+            )
 
 
 class Olaps(AuthBiz):
@@ -568,46 +775,100 @@ class Olaps(AuthBiz):
     Все методы этого сервиса работают по протоколу https.
     """
 
-    def olap_columns(self, olap_reports):
+    def olap_columns(self, **params) -> json:
         """
         Получить информацию о колонках олап-отчета
-        :param olap_reports: тип олап отчёта (Sales, Transactions, Deliveries)
+        :param params: {"request_timeout" : "00%3A02%3A00","reportType":"Идентификатор заказа"} тип олап отчёта(reportType) один из : (Sales, Transactions, Deliveries)
         :return: OlapReportColumnsResponse Информация по колонкам олапа заданного типа
         :rtype:obj:`json`
         """
         # /api/0/olaps/olapColumns?access_token={accessToken}&request_timeout={requestTimeout}&organizationId={organizationId}&reportType={reportType}
-        pass
+        params += {"organization": self.org}
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/olaps/olapColumns?access_token={self.token}', params=params, )
+            return result.json()
 
-    def olap(self, **params: dict):
+        except requests.exceptions.RequestException as err:
+            raise GetException(
+                self.__class__.__qualname__,
+                self.olap_columns.__name__,
+                f"[ERROR] Не удалось получить информацию о колонках олап-отчета\n{err}"
+            )
+
+    def olap(self, olap_report_request: dict, **params) -> json:
         """
         Получить олап-отчет
         Получить данные олап отчета
 
-        :param params: Запрос на получение олап-отчета(POST-параметр. передается в body)
+        :param olap_report_request: Запрос на получение олап-отчета(POST-параметр. передается в body)
+        :param params: {"request_timeout" : "00%3A02%3A00",}
         :type params:obj:`dict`
         :return: OlapReportResponse Данные олап-отчета
         """
         # /api/0/olaps/olap?access_token={accessToken}&request_timeout={requestTimeout}
-        pass
+        params += {"organization": self.org}
+        self.check_token_time()
+        try:
+            result = self.session_s.post(
+                f'{self.base_url}/api/0/olaps/olap?access_token={self.token}',
+                params=params,
+                data=olap_report_request,)
+            return result.json()
 
-    def olap_presets(self):
+        except requests.exceptions.RequestException as err:
+            raise PostException(
+                self.__class__.__qualname__,
+                self.olap.__name__,
+                f"[ERROR] Не удалось получить данные олап отчета\n{err}"
+            )
+
+    def olap_presets(self, **params):
         """
         Получить виды преднастроенных олап-отчетов
+        :param params: {"request_timeout" : "00%3A02%3A00",}
         :return: OlapReportPresetsResponse Информация по видам преднастроенных олап-отчетов для заданной организации.
         """
         # /api/0/olaps/olapPresets?access_token={accessToken}&request_timeout={requestTimeout}&organizationId={organizationId}
-        pass
+        params += {"organization": self.org}
+        self.check_token_time()
+        try:
+            result = self.session_s.post(
+                f'{self.base_url}/api/0/olaps/olapPresets?access_token={self.token}',
+                params=params,)
+            return result.json()
 
-    def olap_by_preset(self, presetOlapReportRequest: dict, **params: dict) -> json:
+        except requests.exceptions.RequestException as err:
+            raise PostException(
+                self.__class__.__qualname__,
+                self.olap_presets.__name__,
+                f"[ERROR] Не удалось получить виды преднастроенных олап-отчетов\n{err}"
+            )
+
+    def olap_by_preset(self, preset_olap_report_request: dict, **params: dict) -> json:
         """
         Получить преднастроенный олап-отчет
 
-        :param presetOlapReportRequest: PresetOlapReportRequest запрос на получение олап-отчета(POST-параметр. передается в body)
-        :param params: параметры в адресной строке
+        :param preset_olap_report_request: PresetOlapReportRequest запрос на получение олап-отчета(POST-параметр. передается в body)
+        :param params:  {"request_timeout" : "00%3A02%3A00",}
         :return: OlapReportResponse Данные преднастроенного олап-отчета
         """
         # /api/0/olaps/olapByPreset?access_token={accessToken}&organizationId={organizationId}&request_timeout={requestTimeout}
-        pass
+        params += {"organization": self.org}
+        self.check_token_time()
+        try:
+            result = self.session_s.post(
+                f'{self.base_url}/api/0/olaps/olapByPreset?access_token={self.token}',
+                params=params, data=preset_olap_report_request)
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise PostException(
+                self.__class__.__qualname__,
+                self.olap_by_preset.__name__,
+                f"[ERROR] Не удалось получить преднастроенный олап-отчет\n{err}"
+            )
 
 
 class Events(AuthBiz):
@@ -616,36 +877,73 @@ class Events(AuthBiz):
     Все методы этого сервиса работают по протоколу https.
     """
 
-    def events(self, **eventsRequest: dict) -> json:
+    def events(self, events_request: dict, **params) -> json:
         """
         Получить данные журнала событий
 
-        :param eventsRequest: Запрос на получение журнала событий (POST-параметр. передается в body)
+        :param events_request: Запрос на получение журнала событий (POST-параметр. передается в body)
+        :param params: {"request_timeout" : "00%3A02%3A00",}
         :return: eventsResponse Данные журнала событий
         """
         # /api/0/events/events?access_token={accessToken}&request_timeout={requestTimeout}
-        pass
 
-    def get_events_metadata(self, **eventsRequest: dict):
+        self.check_token_time()
+        try:
+            result = self.session_s.post(
+                f'{self.base_url}/api/0/events/events?access_token={self.token}',
+                params=params,)
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise PostException(
+                self.__class__.__qualname__,
+                self.events.__name__,
+                f"[ERROR] Не удалось получить преднастроенный олап-отчет\n{err}"
+            )
+
+    def get_events_metadata(self, events_request: dict, **params) -> json:
         """
         Получить мета данные журнала событий
 
-        :param eventsRequest:запрос на получение мета данных журнала событий (POST-параметр. передается в body)
+        :param events_request:запрос на получение мета данных журнала событий (POST-параметр. передается в body)
+        :param params: {"request_timeout" : "00%3A02%3A00",}
         :return:EventsResponse Данные журнала событий
         """
-        # /api/0/events/eventsMetadata?access_token={accessToken}&request_timeout={requestTimeout}\
-        pass
+        # /api/0/events/eventsMetadata?access_token={accessToken}&request_timeout={requestTimeout}
+        self.check_token_time()
+        try:
+            result = self.session_s.post(
+                f'{self.base_url}/api/0/events/eventsMetadata?access_token={self.token}',
+                params=params, data=events_request,)
+            return result.json()
+        except requests.exceptions.RequestException as err:
+            raise PostException(
+                self.__class__.__qualname__,
+                self.get_events_metadata.__name__,
+                f"[ERROR] Не удалось получить мета данные журнала событий\n{err}"
+            )
 
-    def sessions(self, **eventsRequest: json):
+    def sessions(self, events_request: dict, **params):
         """
         Получить информацию о кассовых сменах
         Получить информацию о кассовых сменах за операционный период (день)
 
-        :param eventsRequest: запрос на получение мета данных журнала событий (POST-параметр. передается в body)
+        :param events_request: запрос на получение мета данных журнала событий (POST-параметр. передается в body)
         :return: EventsResponse Данные журнала событий
         """
         # /api/0/events/sessions?access_token={accessToken}&request_timeout={requestTimeout}
-        pass
+        self.check_token_time()
+        try:
+            result = self.session_s.post(
+                f'{self.base_url}/api/0/events/sessions?access_token={self.token}',
+                params=params, data=events_request, )
+            return result.json()
+        except requests.exceptions.RequestException as err:
+            raise PostException(
+                self.__class__.__qualname__,
+                self.sessions.__name__,
+                f"[ERROR] Не удалось получить мета данные журнала событий\n{err}"
+            )
 
 
 class BizAPI(Orders, Organization, Nomenclature, Cities,
