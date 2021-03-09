@@ -5,6 +5,7 @@ from .exception import TokenException
 from .exception import GetException
 from .exception import PostException
 from .exception import SetSession
+from .exception import CheckTimeToken
 import json
 
 
@@ -32,18 +33,26 @@ class AuthBiz:
 
         # self.request_timeout = "00%3A02%3A00"
 
-    def checkout_time_token(self) -> bool:
+    def check_token_time(self) -> bool:
         """
         Проверка на время жизни маркера доступа
         :return: Если прошло 15 мин будет запрошен токен и метод вернёт True, иначе вернётся False
         """
         fifteen_minutes_ago = dt.now() - td(minutes=15)
         time_token = self.__time_token
-        if time_token <= fifteen_minutes_ago:
-            print(f"Update token: {self.get_token()}")
-            return True
-        else:
-            return False
+        # if self.__token and self.__time_token:
+        try:
+
+            if time_token <= fifteen_minutes_ago:
+                print(f"Update token: {self.get_token()}")
+                return True
+            else:
+                return False
+        except TypeError:
+            raise CheckTimeToken(
+                self.__class__.__qualname__,
+                self.check_token_time.__name__,
+                f"[ERROR] Не запрошен Token и не присвоен обьект типа datetime.datetime")
 
     @property
     def session_s(self) -> requests.Session:
@@ -119,7 +128,7 @@ class Orders(AuthBiz):
         :param params: {"request_timeout" : "00%3A02%3A00"}
         """
 
-        self.checkout_time_token()
+        self.check_token_time()
         try:
             result = self.session_s.get(
                 f'{self.base_url}/api/0/orders/get_courier_orders?access_token={self.token}'
@@ -128,10 +137,10 @@ class Orders(AuthBiz):
                 params=params)
             return result.json()  # ['deliveryOrders']
 
-        except requests.exceptions.ConnectTimeout:
+        except requests.exceptions.RequestException as err:
             raise GetException(self.__class__.__qualname__,
                                self.get_courier_orders.__name__,
-                               f"[ERROR] Не удалось получить активные заказы курьера")
+                               f"[ERROR] Не удалось получить активные заказы курьера\n{err}")
 
     def delivery_orders(self, **params) -> json:
         """
@@ -139,17 +148,17 @@ class Orders(AuthBiz):
         :param params: {"dateFrom": "","dateTo" : "", "deliveryStatus" : "", "deliveryTerminalId" : "", "request_timeout" : "00%3A02%3A00"}
 
         """
-        self.checkout_time_token()
+        self.check_token_time()
         try:
             result = self.session_s.get(
                 f'{self.base_url}/api/0/orders/deliveryOrders?access_token={self.token}&organization={self.org}',
                 params=params)
             return result.json()
 
-        except requests.exceptions.ConnectTimeout:
+        except requests.exceptions.RequestException as err:
             raise GetException(self.__class__.__qualname__,
                                self.delivery_orders.__name__,
-                               f"[ERROR] Не удалось получить активные заказы курьера")
+                               f"[ERROR] Не удалось получить все заказы \n{err}")
 
     def set_order_delivered(self, set_order_delivered_request: dict, **params: dict):
         """
@@ -159,7 +168,7 @@ class Orders(AuthBiz):
         :param params: {"request_timeout" : "00%3A02%3A00"}
         :return: http status code
         """
-        self.checkout_time_token()
+        self.check_token_time()
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/orders/set_order_delivered?access_token={self.token}&organization='
@@ -168,33 +177,65 @@ class Orders(AuthBiz):
                 data=set_order_delivered_request, )
             return result.status_code
 
-        except requests.exceptions.RequestException:
+        except requests.exceptions.RequestException as err:
             raise PostException(
                 self.__class__.__qualname__,
                 self.set_order_delivered.__name__,
-                f"[ERROR] Не удалось отправить подтверждеие\n"
+                f"[ERROR] Не удалось отправить подтверждеие\n{err}"
             )
 
 
 class Organization(AuthBiz):
     def get_organization(self) -> json:
         """Организации"""
-        self.checkout_time_token()
+        self.check_token_time()
         try:
             result = self.session_s.get(f'{self.base_url}api/0/organization/list?access_token={self.token}')
             return result.json()
-        except requests.exceptions.ConnectTimeout:
+
+        except requests.exceptions.RequestException as err:
             raise GetException(
                 self.__class__.__qualname__,
                 self.get_organization.__name__,
-                f"[ERROR] Не удалось получить организации\n"
+                f"[ERROR] Не удалось получить организации\n{err}"
             )
 
 
 class Nomenclature(AuthBiz):
+    """
+    Номенклатура (меню)
+    """
+
     def nomenclature(self) -> json:
+        """
+        Получить дерево номенклатуры
+        Один запрос возвращает информацию как о группах, так и о продуктах.
+        Метод возвращает:
+        1. полное дерево продуктов,
+        2. null при их отсутствии.
+
+        :return:
+        {
+        groups:Группы
+        products:Продукты
+        revision:Ревизия (одна на все дерево продуктов)
+        productCategories:Группы продуктов
+        uploadDate:Дата последнего обновления меню в формате "yyyy-MM-dd HH:mm:ss"
+        }
+        """
         # /api/0/nomenclature/{organizationId}?access_token={accessToken}
-        pass
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/nomenclature/{self.org}?access_token={self.token}')
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise GetException(
+                self.__class__.__qualname__,
+                self.nomenclature.__name__,
+                f"[ERROR] Не удалось получить список курьеров\n{err}"
+            )
 
 
 class Cities(AuthBiz):
@@ -212,7 +253,18 @@ class Cities(AuthBiz):
         :return: CityWithStreets[] Города с улицами
         """
         # /api/0/cities/cities?access_token={accessToken}&organization={organizationId}
-        pass
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/cities/cities?access_token={self.token}&organization={self.org}')
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise GetException(
+                self.__class__.__qualname__,
+                self.cities.__name__,
+                f"[ERROR] Не удалось получить список городов с улицами\n{err}"
+            )
 
     def cities_list(self):
         """
@@ -223,19 +275,42 @@ class Cities(AuthBiz):
         :return: City[] Города
         """
         # /api/0/cities/citiesList?access_token={accessToken}&organization={organizationId}
-        pass
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/cities/citiesList?access_token={self.token}&organization={self.org}')
+            return result.json()
 
-    def streets(self, cityId: str):
+        except requests.exceptions.RequestException as err:
+            raise GetException(
+                self.__class__.__qualname__,
+                self.cities_list.__name__,
+                f"[ERROR] Не удалось получить список городов\n{err}"
+            )
+
+    def streets(self, **params: dict):
         """
         Получение списка улиц города заданной организации
         Метод возвращает список всех городов заданной организации. Эти данные могут быть
         использовать для задания адреса доставки.
 
-        :param cityId: Идентификатор города
+        :param params:  {"city": "Идентификатор города"}
         :return: Street[] Улицы
         """
         # /api/0/streets/streets?access_token={accessToken}&organization={organizationId}&city={cityId}
-        pass
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/streets/streets?access_token={self.token}&organization={self.org}',
+                params=params)
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise GetException(
+                self.__class__.__qualname__,
+                self.streets.__name__,
+                f"[ERROR] Не удалось получить список улиц\n{err}"
+            )
 
     def regions(self):
         """
@@ -246,7 +321,18 @@ class Cities(AuthBiz):
         :return: Region[] Список регионов
         """
         # /api/0/regions/regions?access_token={accessToken}&organization={organizationId}
-        pass
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/regions/regions?access_token={self.token}&organization={self.org}')
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise GetException(
+                self.__class__.__qualname__,
+                self.regions.__name__,
+                f"[ERROR] Не удалось получить список регионов\n{err}"
+            )
 
 
 class Notices(AuthBiz):
@@ -255,32 +341,70 @@ class Notices(AuthBiz):
     Все методы этого сервиса работают по протоколу https.
     """
 
-    def notices(self, **params) -> json:
+    def notices(self, params: dict, **notices_request: dict) -> json:
         """
         Получить данные журнала событий
 
-        :param params: информация об уведомлениях (POST-параметр. передается в body)
-        :return :NoticesResponse :ответ об успешности операции отправки
+        :param params: {"request_timeout":""}
+        :params notices_request: информация об уведомлениях (POST-параметр. передается в body)
+        :return :NoticesResponse: ответ об успешности операции отправки
         :rtype :obj:`json`
         """
         # /api/0/notices/notices?access_token={accessToken}&request_timeout={requestTimeout}
-        pass
+        self.check_token_time()
+        try:
+            result = self.session_s.post(
+                f'{self.base_url}/api/0/regions/regions?access_token={self.token}&organization={self.org}',
+                params=params,
+                data=notices_request)
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise PostException(
+                self.__class__.__qualname__,
+                self.notices.__name__,
+                f"[ERROR] Не удалось получить список регионов\n{err}"
+            )
 
 
 class RMSSettings(AuthBiz):
     def supported_protocols(self) -> json:
         """
+        Получение списка протоколов заданной организции
+
         :return: OrganizationSupportedProtocol[] :Список протоколов, поддерживаемых организацией
         """
         # /api/0/rmsSettings/supportedProtocols?access_token={accessToken}&organization={organizationId}
-        pass
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/rmsSettings/supportedProtocols?access_token={self.token}&organization={self.org}')
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise GetException(
+                self.__class__.__qualname__,
+                self.supported_protocols.__name__,
+                f"[ERROR] Не удалось получить список регионов\n{err}"
+            )
 
     def get_roles(self) -> json:
         """
         :return :OrganizationRole: Список всех ролей организации Response
         """
         # /api/0/rmsSettings/getRoles?access_token={accessToken}&organization={organizationId}
-        pass
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/rmsSettings/supportedProtocols?access_token={self.token}&organization={self.org}')
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise GetException(
+                self.__class__.__qualname__,
+                self.get_roles.__name__,
+                f"[ERROR] Не удалось получить список регионов\n{err}"
+            )
 
     def get_employees(self) -> json:
         """
@@ -324,18 +448,18 @@ class RMSSettings(AuthBiz):
         :return: deliveryOrders: struct
         :rtype: json: :obj:`json`
         """
-        self.checkout_time_token()
+        self.check_token_time()
         try:
             result = self.session_s.get(
                 f'{self.base_url}/api/0/rmsSettings/getCouriers?access_token={self.token}'
                 f'&organization={self.org}')
             return result.json()  # ['users']
 
-        except requests.exceptions.ConnectTimeout:
+        except requests.exceptions.RequestException as err:
             raise GetException(
                 self.__class__.__qualname__,
                 self.get_couriers.__name__,
-                f"[ERROR] Не удалось получить список курьеров\n"
+                f"[ERROR] Не удалось получить список курьеров\n{err}"
             )
 
 
@@ -474,11 +598,12 @@ class Olaps(AuthBiz):
         # /api/0/olaps/olapPresets?access_token={accessToken}&request_timeout={requestTimeout}&organizationId={organizationId}
         pass
 
-    def olap_by_preset(self, **presetOlapReportRequest: dict) -> json:
+    def olap_by_preset(self, presetOlapReportRequest: dict, **params: dict) -> json:
         """
         Получить преднастроенный олап-отчет
 
         :param presetOlapReportRequest: PresetOlapReportRequest запрос на получение олап-отчета(POST-параметр. передается в body)
+        :param params: параметры в адресной строке
         :return: OlapReportResponse Данные преднастроенного олап-отчета
         """
         # /api/0/olaps/olapByPreset?access_token={accessToken}&organizationId={organizationId}&request_timeout={requestTimeout}
