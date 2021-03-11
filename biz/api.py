@@ -9,7 +9,7 @@ from .exception import CheckTimeToken
 import json
 
 
-class AuthBiz:
+class Auth:
     """
     Если не был присвоен кастомный session то по стандарту header будет равняться:
     {
@@ -114,7 +114,7 @@ class AuthBiz:
                                  f"[ERROR] Не удалось получить маркер доступа: \n{err}")
 
 
-class Orders(AuthBiz):
+class Orders(Auth):
     """
     Сервис для работы с разделом заказов iiko Biz Api
     Все методы возвращают чистый json
@@ -176,7 +176,7 @@ class Orders(AuthBiz):
                                self.delivery_orders.__name__,
                                f"[ERROR] Не удалось получить все заказы \n{err}")
 
-    def set_order_delivered(self, set_order_delivered_request: dict, **params: dict):
+    def set_order_delivered(self, set_order_delivered_request: dict, params: dict):
         """
         Отправить подтверждеие
 
@@ -201,7 +201,7 @@ class Orders(AuthBiz):
             )
 
 
-class Organization(AuthBiz):
+class Organization(Auth):
     def get_organization(self) -> json:
         """Организации"""
         self.check_token_time()
@@ -217,7 +217,7 @@ class Organization(AuthBiz):
             )
 
 
-class Nomenclature(AuthBiz):
+class Nomenclature(Auth):
     """
     Номенклатура (меню)
     """
@@ -254,7 +254,7 @@ class Nomenclature(AuthBiz):
             )
 
 
-class Cities(AuthBiz):
+class Cities(Auth):
     """
     Города, улицы, регионы
     Получение списка городов и их улиц
@@ -304,7 +304,7 @@ class Cities(AuthBiz):
                 f"[ERROR] Не удалось получить список городов\n{err}"
             )
 
-    def streets(self, **params: dict):
+    def streets(self, params: dict):
         """
         Получение списка улиц города заданной организации
         Метод возвращает список всех городов заданной организации. Эти данные могут быть
@@ -351,7 +351,7 @@ class Cities(AuthBiz):
             )
 
 
-class Notices(AuthBiz):
+class Notices(Auth):
     """
     Уведомления
     Все методы этого сервиса работают по протоколу https.
@@ -383,7 +383,7 @@ class Notices(AuthBiz):
             )
 
 
-class RMSSettings(AuthBiz):
+class RMSSettings(Auth):
     """
     Получение списка протоколов заданной организции
     Возвращает список поддерживаемых протоколов
@@ -554,7 +554,7 @@ class RMSSettings(AuthBiz):
             )
 
 
-class StopLists(AuthBiz):
+class StopLists(Auth):
     """
     Все методы этого сервиса работают по протоколу https.
     """
@@ -585,12 +585,12 @@ class StopLists(AuthBiz):
             )
 
 
-class Mobile(AuthBiz):
+class Mobile(Auth):
     """
     Мобильное приложение курьера
     """
 
-    def signin(self, mobile_login_request_dto: dict, **params, ) -> json:
+    def signin(self, mobile_login_request_dto: dict, params, ) -> json:
         """
         Запрос логина курьера доставки на удаленный РМС сервер
 
@@ -618,7 +618,7 @@ class Mobile(AuthBiz):
                 f"[ERROR] Не удалось получить Запрос логина курьера доставки на удаленный РМС сервер\n{err}"
             )
 
-    def sysc(self, send_update_dto: dict, **params) -> json:
+    def sysc(self, send_update_dto: dict, params) -> json:
         """
         Запрос полной синхронизации мобильного приложения и сервера доставок
         Отсылает изменения в доставках (статус, проблема) и сохраненные gps координаты курьера.
@@ -648,7 +648,7 @@ class Mobile(AuthBiz):
             )
 
 
-class DeliverySettings(AuthBiz):
+class DeliverySettings(Auth):
     """
     Настройки доставки
     """
@@ -720,7 +720,7 @@ class DeliverySettings(AuthBiz):
                 f"[ERROR] Не удалось получить список доставочных ресторанов, подключённых к данному ресторану\n{err}"
             )
 
-    def get_survey_items(self, **params):
+    def get_survey_items(self, params):
         """
         Вернуть вопросы для отзыва клиента о сделанной доставке
 
@@ -769,13 +769,13 @@ class DeliverySettings(AuthBiz):
             )
 
 
-class Olaps(AuthBiz):
+class Olaps(Auth):
     """
     Олапы
     Все методы этого сервиса работают по протоколу https.
     """
 
-    def olap_columns(self, **params) -> json:
+    def olap_columns(self, params) -> json:
         """
         Получить информацию о колонках олап-отчета
         :param params: {"request_timeout" : "00%3A02%3A00","reportType":"Идентификатор заказа"} тип олап отчёта(reportType) один из : (Sales, Transactions, Deliveries)
@@ -797,7 +797,7 @@ class Olaps(AuthBiz):
                 f"[ERROR] Не удалось получить информацию о колонках олап-отчета\n{err}"
             )
 
-    def olap(self, olap_report_request: dict, **params) -> json:
+    def olap(self, olap_report_request: dict, params) -> json:
         """
         Получить олап-отчет
         Получить данные олап отчета
@@ -824,7 +824,7 @@ class Olaps(AuthBiz):
                 f"[ERROR] Не удалось получить данные олап отчета\n{err}"
             )
 
-    def olap_presets(self, **params):
+    def olap_presets(self, params):
         """
         Получить виды преднастроенных олап-отчетов
         :param params: {"request_timeout" : "00%3A02%3A00",}
@@ -846,7 +846,7 @@ class Olaps(AuthBiz):
                 f"[ERROR] Не удалось получить виды преднастроенных олап-отчетов\n{err}"
             )
 
-    def olap_by_preset(self, preset_olap_report_request: dict, **params: dict) -> json:
+    def olap_by_preset(self, preset_olap_report_request: dict, params: dict) -> json:
         """
         Получить преднастроенный олап-отчет
 
@@ -871,13 +871,13 @@ class Olaps(AuthBiz):
             )
 
 
-class Events(AuthBiz):
+class Events(Auth):
     """
     Журнал событий
     Все методы этого сервиса работают по протоколу https.
     """
 
-    def events(self, events_request: dict, **params) -> json:
+    def events(self, events_request: dict, params) -> json:
         """
         Получить данные журнала событий
 
@@ -891,7 +891,7 @@ class Events(AuthBiz):
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/events/events?access_token={self.token}',
-                params=params,)
+                params=params,data=events_request)
             return result.json()
 
         except requests.exceptions.RequestException as err:
@@ -901,7 +901,7 @@ class Events(AuthBiz):
                 f"[ERROR] Не удалось получить преднастроенный олап-отчет\n{err}"
             )
 
-    def get_events_metadata(self, events_request: dict, **params) -> json:
+    def get_events_metadata(self, events_request: dict, params) -> json:
         """
         Получить мета данные журнала событий
 
@@ -923,7 +923,7 @@ class Events(AuthBiz):
                 f"[ERROR] Не удалось получить мета данные журнала событий\n{err}"
             )
 
-    def sessions(self, events_request: dict, **params):
+    def sessions(self, events_request: dict, params):
         """
         Получить информацию о кассовых сменах
         Получить информацию о кассовых сменах за операционный период (день)
