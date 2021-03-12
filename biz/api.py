@@ -18,7 +18,11 @@ class Auth:
     'Content-Encoding': 'utf-8'
     }
     """
+
+    # const
     DEFAULT_TIMEOUT = "00%3A02%3A00"
+    BASE_URL = "https://iiko.biz"
+    PORT = ":9900"
 
     def __init__(self, login: str, password: str, org: str, session: requests.Session = None):
         self.__session = requests.Session()
@@ -30,7 +34,7 @@ class Auth:
         self.__org = org
         self.__token = None
         self.__time_token = None
-        self.__base_url = "https://iiko.biz:9900"
+        self.__base_url = f"{self.BASE_URL}{self.PORT}"
 
         # self.request_timeout = "00%3A02%3A00"
 
