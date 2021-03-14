@@ -65,14 +65,10 @@
 
 #### Первый запуск
     #Обязательно при инициализации класса(объекта, сервиса) вызовите метод для получения маркера доступа
-    from biz import BizAPI
+    from biz import Biz
 
-    api = BizAPI(login,password,organizationId)
+    api = Biz(login,password,organizationId)
     api.access_token()
-
-### или
-
-    api = BizAPI(login,password,organizationId).access_token()
 
 Каждый метод проверяет время жизни маркера доступа, если время жизни маркера прошло то будет автоматически запрошен заново.
 
