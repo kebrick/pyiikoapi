@@ -15,30 +15,34 @@ from .exception import ParamSetException
 class Auth:
     """
     Если не был присвоен кастомный session то по стандарту header будет равняться:
-    {
-    'Content-type': 'application/json',
-    'Accept': 'application/json',
-    'Content-Encoding': 'utf-8'
-    }
+        {
+        'Content-type': 'application/json',
+        'Accept': 'application/json',
+        'Content-Encoding': 'utf-8'
+        }
     """
     DEFAULT_TIMEOUT = "00%3A02%3A00"
+    BASE_URL = "https://iiko.biz"
+    PORT = ":9900"
 
     def __init__(self, login: str, password: str, org: str, session: requests.Session = None):
         self.__session = requests.Session()
-        if session is not None:
-            self.__session = session
         self.__session.headers = {
             'ContentType': 'application/json',
+            'Accept': 'application/json',
+            'Content-Encoding': 'utf-8'
         }
+        if session is not None:
+            self.__session = session
+
         self.__login = login
         self.__password = password
         self.__org = org
         self.__token = None
         self.__token_user = None
         self.__time_token = None
-        self.__base_url = "https://iiko.biz:9900"
+        self.__base_url = f"{self.BASE_URL}{self.PORT}"
         self.access_token()
-        # self.request_timeout = "00%3A02%3A00"
 
     def check_token_time(self) -> bool:
         """
@@ -49,7 +53,6 @@ class Auth:
         time_token = self.__time_token
         # if self.__token and self.__time_token:
         try:
-
             if time_token <= fifteen_minutes_ago:
                 print(f"Update token: {self.access_token()}")
                 return True
@@ -120,17 +123,17 @@ class Auth:
                 f'{self.base_url}/api/0/auth/access_token?user_id={self.login}&user_secret={self.password}')
             self.__token = result.text[1:-1]
             self.__time_token = dt.now()
-            # return result.text[1:-1]
 
         except requests.exceptions.RequestException as err:
             raise TokenException(self.__class__.__qualname__,
                                  self.access_token.__name__,
                                  f"[ERROR] Не удалось получить маркер доступа: \n{err}")
 
-    def echo(self, msg: str = "YUP TOKEN:)"):
+    def echo(self, msg: str = "YUP TOKEN:)") -> bool:
         """
         Проверка маркера доступа апи логина
-        :param msg: ТЕк
+        :param msg: Секретное слово для проверки токена
+        :return: bool True в случае соответствия и наоборот
         """
         # /api/0/auth/echo?msg={msg}&access_token={accessToken}
         try:
@@ -138,14 +141,15 @@ class Auth:
                 f'{self.base_url}/api/0/auth/echo?msg={msg}&access_token={self.token}')
 
             if result.text != msg:
-                return self.access_token()
+                return False
+            return True
 
         except requests.exceptions.RequestException as err:
             raise TokenException(self.__class__.__qualname__,
                                  self.echo.__name__,
                                  f"[ERROR] Не удалось проверить маркер доступа апи логина: \n{err}")
 
-    def biz_access_token(self, biz_user_ext_app_key: str):
+    def biz_access_token(self, biz_user_ext_app_key: str) -> str:
         """
         Получить маркер доступа пользователя biz
         """
@@ -154,14 +158,13 @@ class Auth:
             result = self.session_s.get(
                 f'{self.base_url}/api/0/auth/biz_access_token?user_ext_id={biz_user_ext_app_key}')
             self.__token_user = result.text[1:-1]
-            self.__time_token = dt.now()
-
+            return result.text[1:-1]
         except requests.exceptions.RequestException as err:
             raise TokenException(self.__class__.__qualname__,
                                  self.biz_access_token.__name__,
                                  f"[ERROR] Не удалось получить маркер доступа пользователя biz: \n{err}")
 
-    def api_access_token(self):
+    def api_access_token(self) -> json.JSONDecoder:
         """
         Получить информацию о заданном пользователе biz, доступную для заданного апи логина
 
@@ -192,7 +195,7 @@ class Organization(Auth):
     картах, в списках и т.п.
     """
 
-    def list(self, params: dict = None):
+    def list(self, params: dict = None) -> json.JSONDecoder:
         """
         Получение списка организаций
 
@@ -210,7 +213,7 @@ class Organization(Auth):
                                self.list.__name__,
                                f"[ERROR] Не удалось получить маркер доступа: \n{err}")
 
-    def organization_id(self, params: dict = None):
+    def organization_id(self, params: dict = None) -> json.JSONDecoder:
         """
         Получение информации о заданной организации
         Возвращает поля-описатели организации
@@ -229,7 +232,7 @@ class Organization(Auth):
                                self.organization_id.__name__,
                                f"[ERROR] Не удалось получить информации о заданной организации: \n{err}")
 
-    def user_organizations(self, user_id: list = None):
+    def user_organizations(self, user_id: list = None) -> json.JSONDecoder:
         """
         Получить списки организаций, доступных пользователям приложения
 
@@ -248,7 +251,7 @@ class Organization(Auth):
                                 f"[ERROR] Не удалось получить списки организаций, "
                                 f"доступных пользователям приложения: \n{err}")
 
-    def corporate_nutritions(self):
+    def corporate_nutritions(self) -> json.JSONDecoder:
         """
         Получить список активных программ корпоративного питания для организации
 
@@ -286,7 +289,7 @@ class Organization(Auth):
                                self.calculate_checkin_result.__name__,
                                f"[ERROR] Не удалось рассчитать программу лояльности для заказа: \n{err}")
 
-    def get_combos_info(self):
+    def get_combos_info(self) -> json.JSONDecoder:
         """
         Получить описание всех комбо и категорий комбо для организации
 
@@ -304,7 +307,7 @@ class Organization(Auth):
                                f"[ERROR] Не удалось получить описание всех комбо и "
                                f"категорий комбо для организации: \n{err}")
 
-    def get_manual_condition_infos(self):
+    def get_manual_condition_infos(self) -> json.JSONDecoder:
         """
         Получить ручные условия
 
@@ -322,7 +325,7 @@ class Organization(Auth):
                                self.get_manual_condition_infos.__name__,
                                f"[ERROR] Не удалось получить ручные условия: \n{err}")
 
-    def check_and_get_combo_price(self, get_combo_price_request: dict = None):
+    def check_and_get_combo_price(self, get_combo_price_request: dict = None) -> json.JSONDecoder:
         """
         Проверить комбо-блюдо и рассчитать его стоимость
 
@@ -330,6 +333,10 @@ class Organization(Auth):
         :return: CalculateComboPriceResult Результат проверки комбо-блюда и расчета его стоимости
         """
         # /api/0/orders/check_and_get_combo_price?access_token={accessToken}&organization={organizationId}
+        if get_combo_price_request is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.check_and_get_combo_price.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"get_combo_price_request\"")
         self.check_token_time()
         try:
             result = self.session_s.post(
@@ -351,6 +358,10 @@ class Organization(Auth):
         :return: HTTP status code in Response
         """
         # /api/0/organization/{organizationId}/send_sms?access_token={accessToken}
+        if send_sms_request is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.send_sms.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"send_sms_request\"")
         self.check_token_time()
         try:
             result = self.session_s.post(
@@ -373,6 +384,10 @@ class Organization(Auth):
         :return: HTTP status code in Response
         """
         # /api/0/organization/{organizationId}/send_email?access_token={accessToken}
+        if send_email_request is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.send_email.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"send_email_request\"")
         self.check_token_time()
         try:
             result = self.session_s.post(
@@ -384,7 +399,7 @@ class Organization(Auth):
                                 self.send_email.__name__,
                                 f"[ERROR] Не удалось отправить email от имени ресторана: \n{err}")
 
-    def corporate_nutrition_report(self, params: dict = None) -> json:
+    def corporate_nutrition_report(self, params: dict = None) -> json.JSONDecoder:
         """
         Получить ручные условия
         :param params:
@@ -410,7 +425,7 @@ class Organization(Auth):
 
 class Customers(Auth):
 
-    def get_customer_by_phone(self, params: dict = None):
+    def get_customer_by_phone(self, params: dict = None) -> json.JSONDecoder:
         """
         Получить данные гостя по его номеру телефона
 
@@ -418,6 +433,10 @@ class Customers(Auth):
         :return: OrganizationGuestInfo Данные гостя (включая баланс)
         """
         # /api/0/customers/get_customer_by_phone?access_token={accessToken}&organization={organization}&phone={userPhone}
+        if params is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.get_customer_by_phone.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"params\"")
         self.check_token_time()
         try:
             result = self.session_s.get(
@@ -429,7 +448,7 @@ class Customers(Auth):
                                self.get_customer_by_phone.__name__,
                                f"[ERROR] Не удалось получить данные гостя по его номеру телефона: \n{err}")
 
-    def get_customer_by_id(self, params: dict = None):
+    def get_customer_by_id(self, params: dict = None) -> json.JSONDecoder:
         """
         Получить данные гостя по его идентификатору
         Получить информацию о госте организации по его уникальному идентификатору.
@@ -438,6 +457,10 @@ class Customers(Auth):
         :return: OrganizationGuestInfo Данные гостя (включая баланс)
         """
         # /api/0/customers/get_customer_by_id?access_token={accessToken}&organization={organization}&id={userId}
+        if params is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.get_customer_by_id.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"params\"")
         self.check_token_time()
         try:
             result = self.session_s.get(
@@ -449,7 +472,7 @@ class Customers(Auth):
                                self.get_customer_by_id.__name__,
                                f"[ERROR] Не удалось получить данные гостя по его идентификатору: \n{err}")
 
-    def get_customer_by_card(self, params: dict = None):
+    def get_customer_by_card(self, params: dict = None) -> json.JSONDecoder:
         """
         Получить данные гостя организации по его номеру карты
         Получить информацию о госте организации по его номеру карты внутри организации.
@@ -458,6 +481,10 @@ class Customers(Auth):
         :return: OrganizationGuestInfo Данные гостя (включая баланс)
         """
         # /api/0/customers/get_customer_by_card?access_token={accessToken}&organization={organization}&card={cardNumber}
+        if params is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.get_customer_by_card.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"params\"")
         self.check_token_time()
         try:
             result = self.session_s.get(
@@ -469,7 +496,7 @@ class Customers(Auth):
                                self.get_customer_by_card.__name__,
                                f"[ERROR] Не удалось получить данные гостя по его номеру карты: \n{err}")
 
-    def create_or_update(self, customer_for_import: dict = None):
+    def create_or_update(self, customer_for_import: dict = None) -> json.JSONDecoder:
         """
         Создать гостя или обновить информацию о госте
         Метод создает гостя, если заданного телефона нет в базе или обновляет информацию о
@@ -481,6 +508,10 @@ class Customers(Auth):
         :return: Идентификатор гостя
         """
         # /api/0/customers/create_or_update?access_token={accessToken}&organization={organizationId}
+        if customer_for_import is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.create_or_update.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"customer_for_import\"")
         self.check_token_time()
         try:
             result = self.session_s.post(
@@ -502,6 +533,11 @@ class Customers(Auth):
         :return: HTTP status code in Response
         """
         # /api/0/customers/{customerId}/add_category?access_token={accessToken}&organization={organizationId}&categoryId={categoryId}
+        if customer_id is None or category_id is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.create_or_update.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: "
+                                    f"\"customer_id\" или \"category_id\"")
         self.check_token_time()
         try:
             result = self.session_s.post(
@@ -523,6 +559,11 @@ class Customers(Auth):
         :return: HTTP status code in Response
         """
         # /api/0/customers/{customerId}/remove_category?access_token={accessToken}&organization={organizationId}&categoryId={categoryId}
+        if customer_id is None or category_id is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.remove_category.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: "
+                                    f"\"customer_id\" или \"category_id\"")
         self.check_token_time()
         try:
             result = self.session_s.post(
@@ -545,6 +586,14 @@ class Customers(Auth):
         :return: HTTP status code in Response
         """
         # /api/0/customers/{customerId}/add_card?access_token={accessToken}&organization={organizationId}
+        if customer_id is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.add_card.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"customer_id\"")
+        if add_magnet_card_request is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.add_card.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"add_magnet_card_request\"")
         self.check_token_time()
         try:
             result = self.session_s.post(
@@ -567,6 +616,14 @@ class Customers(Auth):
         :return: HTTP status code in Response
         """
         # /api/0/customers/{customerId}/delete_card?access_token={accessToken}&organization={organizationId}
+        if customer_id is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.delete_card.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"customer_id\"")
+        if params is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.delete_card.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"params\"")
         self.check_token_time()
         try:
             result = self.session_s.post(
@@ -587,6 +644,10 @@ class Customers(Auth):
         :return: HTTP status code in Response
         """
         # /api/0/customers/refill_balance?access_token={accessToken}
+        if api_change_balance_request is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.refill_balance.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"api_change_balance_request\"")
         self.check_token_time()
         try:
             result = self.session_s.post(
@@ -608,6 +669,10 @@ class Customers(Auth):
         :return: HTTP status code in Response
         """
         # /api/0/customers/withdraw_balance?access_token={accessToken}
+        if api_change_balance_request is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.withdraw_balance.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"api_change_balance_request\"")
         self.check_token_time()
         try:
             result = self.session_s.post(
@@ -629,6 +694,14 @@ class Customers(Auth):
         :return: HTTP status code in Response
         """
         # /api/0/customers/{customerId}/add_to_nutrition_organization?access_token={accessToken}&organization={organizationId}&corporate_nutrition_id={corporateNutritionId}
+        if customer_id is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.add_to_nutrition_organization.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"customer_id\"")
+        if params is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.add_to_nutrition_organization.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"params\"")
         self.check_token_time()
         try:
             result = self.session_s.post(
@@ -650,6 +723,14 @@ class Customers(Auth):
         :return: HTTP status code in Response
         """
         # /api/0/customers/{customerId}/remove_from_nutrition_organization?access_token={accessToken}&organization={organizationId}&corporate_nutrition_id={corporateNutritionId}
+        if customer_id is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.remove_from_nutrition_organization.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"customer_id\"")
+        if params is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.remove_from_nutrition_organization.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"params\"")
         self.check_token_time()
         try:
             result = self.session_s.post(
@@ -794,9 +875,11 @@ class Customers(Auth):
             raise ParamSetException(self.__class__.__qualname__,
                                     self.transactions_report.__name__,
                                     f"[ERROR] Не присвоен обязательный параметр: \"params\"")
-        params += {"access_token": self.token}
-        if params is not None:
-            params += {"userId": user_id}
+        if user_id is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.transactions_report.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"user_id\"")
+        params += {"access_token": self.token, "userId": user_id}
         self.check_token_time()
         try:
             result = self.session_s.get(
@@ -1079,5 +1162,5 @@ class MobileIikoCard5(Auth):
     pass
 
 
-class Card(Organization, Customers, MobileIikoCard5):
+class CardService(Organization, Customers, MobileIikoCard5):
     pass

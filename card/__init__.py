@@ -1,1 +1,1 @@
-from .api import Card
+from .api import CardService

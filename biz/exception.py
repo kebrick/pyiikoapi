@@ -35,3 +35,9 @@ class CheckTimeToken(BizException):
 
     def __init__(self, name_class, name_method, message):
         super().__init__(f"Class {name_class}: Method - {name_method} - {message}")
+
+
+class ParamSetException(BizException):
+    """"""
+    def __init__(self, name_class, name_method, message):
+        super().__init__(f"Class {name_class}: Method - {name_method} - {message}")

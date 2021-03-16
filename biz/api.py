@@ -1,4 +1,5 @@
 import requests
+import json
 from datetime import datetime as dt
 from datetime import timedelta as td
 from .exception import TokenException
@@ -6,7 +7,7 @@ from .exception import GetException
 from .exception import PostException
 from .exception import SetSession
 from .exception import CheckTimeToken
-import json
+from .exception import ParamSetException
 
 
 class Auth:
@@ -35,8 +36,7 @@ class Auth:
         self.__token = None
         self.__time_token = None
         self.__base_url = f"{self.BASE_URL}{self.PORT}"
-
-        # self.request_timeout = "00%3A02%3A00"
+        self.access_token()
 
     def check_token_time(self) -> bool:
         """
@@ -103,14 +103,13 @@ class Auth:
     def base_url(self, value: str):
         self.__base_url = value
 
-    def access_token(self) -> str:
+    def access_token(self):
         """Получить маркер доступа"""
         try:
             result = self.session_s.get(
                 f'{self.__base_url}/api/0/auth/access_token?user_id={self.__login}&user_secret={self.__password}')
             self.__token = result.text[1:-1]
             self.__time_token = dt.now()
-            return result.text[1:-1]
 
         except requests.exceptions.RequestException as err:
             raise TokenException(self.__class__.__qualname__,
@@ -124,14 +123,17 @@ class Orders(Auth):
     Все методы возвращают чистый json
     """
 
-    def get_courier_orders(self, **params) -> json:
+    def get_courier_orders(self, params: dict = None) -> json:
         """
         Активные заказы курьера
 
         :param params: {"courier": "Идентификатор курьера", "request_timeout" : "00%3A02%3A00"}
         :return: DeliveryOrdersResponse Информация о заказах
         """
-
+        if params is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.get_courier_orders.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"params\"")
         self.check_token_time()
         try:
             result = self.session_s.get(
@@ -145,11 +147,12 @@ class Orders(Auth):
                                self.get_courier_orders.__name__,
                                f"[ERROR] Не удалось получить активные заказы курьера\n{err}")
 
-    def delivery_orders(self, **params) -> json:
+    def delivery_orders(self, params: dict = None) -> json:
         """
         Получение информации о всех доставках в заданном временном интервале.
 
-        :param params: {"dateFrom": "","dateTo" : "", "deliveryStatus" : "", "deliveryTerminalId" : "","request_timeout" : "00%3A02%3A00"}
+        :param params: {"dateFrom": "","dateTo" : "", "deliveryStatus" : "", "deliveryTerminalId" : "",
+            "request_timeout" : "00%3A02%3A00"}
         "dateFrom" : string : Дата начала интервала (включительно).
         "dateTo" : string : Дата окончания интервала (включительно).
         "deliveryStatus" : string : Статус доставки (регистронезависимый).
@@ -168,6 +171,10 @@ class Orders(Auth):
         # /api/0/orders/deliveryOrders?access_token={accessToken}&organization={organizationId}
         # &dateFrom={dateFrom}&dateTo={dateTo}&deliveryStatus={deliveryStatus}
         # &deliveryTerminalId={deliveryTerminalId}&request_timeout={requestTimeout}
+        if params is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.delivery_orders.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"params\"")
         self.check_token_time()
         try:
             result = self.session_s.get(
@@ -180,14 +187,19 @@ class Orders(Auth):
                                self.delivery_orders.__name__,
                                f"[ERROR] Не удалось получить все заказы \n{err}")
 
-    def set_order_delivered(self, set_order_delivered_request: dict, params: dict):
+    def set_order_delivered(self, set_order_delivered_request: dict = None, params: dict = None):
         """
-        Отправить подтверждеие
+        Отметить заказ доставленным или недоставленным.
 
-        :param set_order_delivered_request:
+        :param set_order_delivered_request: SetOrderDeliveredRequest содержимое запроса на изменение статуса доставки.
         :param params: {"request_timeout" : "00%3A02%3A00"}
         :return: http status code
         """
+        # /api/0/orders/set_order_delivered?access_token={accessToken}&organization={organizationId}&request_timeout={requestTimeout}
+        if set_order_delivered_request is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.set_order_delivered.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"set_order_delivered_request\"")
         self.check_token_time()
         try:
             result = self.session_s.post(
@@ -201,23 +213,7 @@ class Orders(Auth):
             raise PostException(
                 self.__class__.__qualname__,
                 self.set_order_delivered.__name__,
-                f"[ERROR] Не удалось отправить подтверждеие\n{err}"
-            )
-
-
-class Organization(Auth):
-    def get_organization(self) -> json:
-        """Организации"""
-        self.check_token_time()
-        try:
-            result = self.session_s.get(f'{self.base_url}api/0/organization/list?access_token={self.token}')
-            return result.json()
-
-        except requests.exceptions.RequestException as err:
-            raise GetException(
-                self.__class__.__qualname__,
-                self.get_organization.__name__,
-                f"[ERROR] Не удалось получить организации\n{err}"
+                f"[ERROR] Не удалось отправить подтверждение\n{err}"
             )
 
 
@@ -318,6 +314,10 @@ class Cities(Auth):
         :return: Street[] Улицы
         """
         # /api/0/streets/streets?access_token={accessToken}&organization={organizationId}&city={cityId}
+        if params is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.streets.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"params\"")
         self.check_token_time()
         try:
             result = self.session_s.get(
@@ -361,16 +361,21 @@ class Notices(Auth):
     Все методы этого сервиса работают по протоколу https.
     """
 
-    def notices(self, params: dict, **notices_request: dict) -> json:
+    def notices(self, notices_request: dict = None, params: dict = None) -> json:
         """
         Получить данные журнала событий
 
+
+        :param notices_request: NoticesRequest информация об уведомлениях (POST-параметр. передается в body)
         :param params: {"request_timeout":""}
-        :params notices_request: информация об уведомлениях (POST-параметр. передается в body)
         :return :NoticesResponse: ответ об успешности операции отправки
         :rtype :obj:`json`
         """
         # /api/0/notices/notices?access_token={accessToken}&request_timeout={requestTimeout}
+        if notices_request is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.notices.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"notices_request\"")
         self.check_token_time()
         try:
             result = self.session_s.post(
@@ -389,13 +394,13 @@ class Notices(Auth):
 
 class RMSSettings(Auth):
     """
-    Получение списка протоколов заданной организции
+    Получение списка протоколов заданной организации
     Возвращает список поддерживаемых протоколов
     """
 
     def supported_protocols(self) -> json:
         """
-        Получение списка протоколов заданной организции
+        Получение списка протоколов заданной организации
 
         :return: OrganizationSupportedProtocol[] :Список протоколов, поддерживаемых организацией
         """
@@ -571,7 +576,8 @@ class StopLists(Auth):
         В случае запроса на колл-центра в результате могут находяится позиции стоп-листа из
         других ресторанов.
 
-        :return: StopListAtOrganization[] Элементы стоп-листа; string[] Идентификаторы организаций, которые не зарегистрированы в iikoBiz.
+        :return: StopListAtOrganization[] Элементы стоп-листа; string[] Идентификаторы организаций, которые не
+            зарегистрированы в iikoBiz.
         """
         # /api/0/stopLists/getDeliveryStopList?access_token={accessToken}&organization={organizationId}
         self.check_token_time()
@@ -594,19 +600,25 @@ class Mobile(Auth):
     Мобильное приложение курьера
     """
 
-    def signin(self, mobile_login_request_dto: dict, params, ) -> json:
+    def signin(self, mobile_login_request_dto: dict = None, params: dict = None) -> json.JSONDecoder:
         """
         Запрос логина курьера доставки на удаленный РМС сервер
 
-        :param mobile_login_request_dto: Сущность, описывающая запрос на логин
-        :param params: словарь с ключом и значением  {"request_timeout":"00%3A02%3A00"}
-        :return: MobileLoginResult DTO, описывающий результат логина (есть ли Dto ошибки), сообщает также версию сервера
-        :rtype:obj:`json`
+        :param mobile_login_request_dto: MobileLoginRequestDto Сущность, описывающая запрос на логин
+        :param params: {"request_timeout":"00%3A02%3A00"} Таймаут для выполнения запроса
+        :return: MobileLoginResultDTO, описывающий результат логина (есть ли Dto ошибки), сообщает также версию сервера
         """
         # /api/0/mobile/signin?access_token={accessToken}&request_timeout={requestTimeout}&organization={organizationId}
+        if mobile_login_request_dto is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.signin.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"mobile_login_request_dto\"")
+        if params is None:
+            params = {"organization": self.org}
+        else:
+            params += {"organization": self.org}
 
         self.check_token_time()
-        params += {"organization": self.org}
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/mobile/signin?access_token={self.token}',
@@ -622,10 +634,10 @@ class Mobile(Auth):
                 f"[ERROR] Не удалось получить Запрос логина курьера доставки на удаленный РМС сервер\n{err}"
             )
 
-    def sysc(self, send_update_dto: dict, params) -> json:
+    def sysc(self, send_update_dto: dict = None, params: dict = None) -> json:
         """
         Запрос полной синхронизации мобильного приложения и сервера доставок
-        Отсылает изменения в доставках (статус, проблема) и сохраненные gps координаты курьера.
+            Отсылает изменения в доставках (статус, проблема) и сохраненные gps координаты курьера.
 
         :param send_update_dto: Изменения доставок на мобильном приложении; список gps координат курьера
         :param params: словарь с ключом и значением  {"request_timeout":"00%3A02%3A00"}
@@ -633,6 +645,15 @@ class Mobile(Auth):
         :rtype:obj:`json`
         """
         # /api/0/mobile/sync?access_token={accessToken}&request_timeout={requestTimeout}&organization={organizationId}
+        if send_update_dto is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.sysc.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"send_update_dto\"")
+        if params is None:
+            params = {"organization": self.org}
+        else:
+            params += {"organization": self.org}
+
         self.check_token_time()
         params += {"organization": self.org}
         try:
@@ -647,8 +668,8 @@ class Mobile(Auth):
             raise PostException(
                 self.__class__.__qualname__,
                 self.sysc.__name__,
-                f"[ERROR] Не удалось отслать изменения в доставках (статус, проблема) и "
-                f"сохраненные gps координаты курьера.\n{err}"
+                f"[ERROR] Не удалось сделать запрос полной синхронизации мобильного"
+                f"приложения и сервера доставок.\n{err}"
             )
 
 
@@ -662,7 +683,6 @@ class DeliverySettings(Auth):
         Получить список скидок, доступных для применения в доставке для заданного ресторана
 
         :return:DiscountCardTypeInfo[] Список скидок, доступных для применения в доставочных заказах.
-        :rtype:obj:`json`
         """
         # /api/0/deliverySettings/deliveryDiscounts?access_token={accessToken}&organization={organizationId}
         self.check_token_time()
@@ -724,7 +744,7 @@ class DeliverySettings(Auth):
                 f"[ERROR] Не удалось получить список доставочных ресторанов, подключённых к данному ресторану\n{err}"
             )
 
-    def get_survey_items(self, params):
+    def get_survey_items(self, params: dict = None) -> json.JSONDecoder:
         """
         Вернуть вопросы для отзыва клиента о сделанной доставке
 
@@ -733,6 +753,10 @@ class DeliverySettings(Auth):
         :rtype:obj:`json`
         """
         # /api/0/deliverySettings/getSurveyItems?access_token={accessToken}&organization={organizationId}&orderId={orderId}
+        if params is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.get_survey_items.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"params\"")
         self.check_token_time()
         try:
             result = self.session_s.get(
@@ -761,7 +785,7 @@ class DeliverySettings(Auth):
         try:
             result = self.session_s.get(
                 f'{self.base_url}/api/0/deliverySettings/getDeliveryCourierMobileSettings?access_token={self.token}'
-                f'&organization={self.org}',)
+                f'&organization={self.org}', )
             return result.json()
 
         except requests.exceptions.RequestException as err:
@@ -779,19 +803,25 @@ class Olaps(Auth):
     Все методы этого сервиса работают по протоколу https.
     """
 
-    def olap_columns(self, params) -> json:
+    def olap_columns(self, params: dict = None) -> json.JSONDecoder:
         """
         Получить информацию о колонках олап-отчета
-        :param params: {"request_timeout" : "00%3A02%3A00","reportType":"Идентификатор заказа"} тип олап отчёта(reportType) один из : (Sales, Transactions, Deliveries)
+        :param params: {"request_timeout" : "00%3A02%3A00", "reportType":"Идентификатор заказа"}
+            параметр request_timeout не обязателен,
+            тип олап отчёта(reportType) один из : (Sales, Transactions, Deliveries)
         :return: OlapReportColumnsResponse Информация по колонкам олапа заданного типа
         :rtype:obj:`json`
         """
         # /api/0/olaps/olapColumns?access_token={accessToken}&request_timeout={requestTimeout}&organizationId={organizationId}&reportType={reportType}
+        if params is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.olap_columns.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"params\"")
         params += {"organization": self.org}
         self.check_token_time()
         try:
             result = self.session_s.get(
-                f'{self.base_url}/api/0/olaps/olapColumns?access_token={self.token}', params=params, )
+                f'{self.base_url}/api/0/olaps/olapColumns?access_token={self.token}', params=params,)
             return result.json()
 
         except requests.exceptions.RequestException as err:
@@ -801,24 +831,28 @@ class Olaps(Auth):
                 f"[ERROR] Не удалось получить информацию о колонках олап-отчета\n{err}"
             )
 
-    def olap(self, olap_report_request: dict, params) -> json:
+    def olap(self, olap_report_request: dict = None, params: dict = None) -> json.JSONDecoder:
         """
         Получить олап-отчет
         Получить данные олап отчета
 
         :param olap_report_request: Запрос на получение олап-отчета(POST-параметр. передается в body)
-        :param params: {"request_timeout" : "00%3A02%3A00",}
+        :param params: {"request_timeout" : "00%3A02%3A00",} не обязателен
         :type params:obj:`dict`
         :return: OlapReportResponse Данные олап-отчета
         """
         # /api/0/olaps/olap?access_token={accessToken}&request_timeout={requestTimeout}
+        if olap_report_request is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.olap.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"olap_report_request\"")
         params += {"organization": self.org}
         self.check_token_time()
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/olaps/olap?access_token={self.token}',
                 params=params,
-                data=olap_report_request,)
+                data=olap_report_request, )
             return result.json()
 
         except requests.exceptions.RequestException as err:
@@ -828,19 +862,23 @@ class Olaps(Auth):
                 f"[ERROR] Не удалось получить данные олап отчета\n{err}"
             )
 
-    def olap_presets(self, params):
+    def olap_presets(self, params: dict = None) -> json.JSONDecoder:
         """
         Получить виды преднастроенных олап-отчетов
-        :param params: {"request_timeout" : "00%3A02%3A00",}
+        :param params: {"request_timeout" : "00%3A02%3A00",} не обязателен
         :return: OlapReportPresetsResponse Информация по видам преднастроенных олап-отчетов для заданной организации.
         """
         # /api/0/olaps/olapPresets?access_token={accessToken}&request_timeout={requestTimeout}&organizationId={organizationId}
-        params += {"organization": self.org}
+        if params is None:
+            params = {"organization": self.org}
+        else:
+            params += {"organization": self.org}
+
         self.check_token_time()
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/olaps/olapPresets?access_token={self.token}',
-                params=params,)
+                params=params, )
             return result.json()
 
         except requests.exceptions.RequestException as err:
@@ -850,20 +888,25 @@ class Olaps(Auth):
                 f"[ERROR] Не удалось получить виды преднастроенных олап-отчетов\n{err}"
             )
 
-    def olap_by_preset(self, preset_olap_report_request: dict, params: dict) -> json:
+    def olap_by_preset(self, preset_olap_report_request: dict = None, params: dict = None) -> json.JSONDecoder:
         """
         Получить преднастроенный олап-отчет
 
-        :param preset_olap_report_request: PresetOlapReportRequest запрос на получение олап-отчета(POST-параметр. передается в body)
-        :param params:  {"request_timeout" : "00%3A02%3A00",}
+        :param preset_olap_report_request: PresetOlapReportRequest запрос на получение олап-отчета
+            (POST-параметр. передается в body)
+        :param params:  {"request_timeout" : "00%3A02%3A00",} не обязателен
         :return: OlapReportResponse Данные преднастроенного олап-отчета
         """
         # /api/0/olaps/olapByPreset?access_token={accessToken}&organizationId={organizationId}&request_timeout={requestTimeout}
-        params += {"organization": self.org}
+        if preset_olap_report_request is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.olap.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"preset_olap_report_request\"")
+
         self.check_token_time()
         try:
             result = self.session_s.post(
-                f'{self.base_url}/api/0/olaps/olapByPreset?access_token={self.token}',
+                f'{self.base_url}/api/0/olaps/olapByPreset?access_token={self.token}&organizationId={self.org}',
                 params=params, data=preset_olap_report_request)
             return result.json()
 
@@ -881,21 +924,24 @@ class Events(Auth):
     Все методы этого сервиса работают по протоколу https.
     """
 
-    def events(self, events_request: dict, params) -> json:
+    def events(self, events_request: dict = None, params: dict = None) -> json.JSONDecoder:
         """
         Получить данные журнала событий
 
         :param events_request: Запрос на получение журнала событий (POST-параметр. передается в body)
-        :param params: {"request_timeout" : "00%3A02%3A00",}
+        :param params: {"request_timeout" : "00%3A02%3A00",} не обязательно
         :return: eventsResponse Данные журнала событий
         """
         # /api/0/events/events?access_token={accessToken}&request_timeout={requestTimeout}
-
+        if events_request is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.events.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"events_request\"")
         self.check_token_time()
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/events/events?access_token={self.token}',
-                params=params,data=events_request)
+                params=params, data=events_request)
             return result.json()
 
         except requests.exceptions.RequestException as err:
@@ -905,20 +951,24 @@ class Events(Auth):
                 f"[ERROR] Не удалось получить преднастроенный олап-отчет\n{err}"
             )
 
-    def get_events_metadata(self, events_request: dict, params) -> json:
+    def get_events_metadata(self, events_request: dict = None, params: dict = None) -> json.JSONDecoder:
         """
         Получить мета данные журнала событий
 
         :param events_request:запрос на получение мета данных журнала событий (POST-параметр. передается в body)
-        :param params: {"request_timeout" : "00%3A02%3A00",}
+        :param params: {"request_timeout" : "00%3A02%3A00",} не обязательно
         :return:EventsResponse Данные журнала событий
         """
         # /api/0/events/eventsMetadata?access_token={accessToken}&request_timeout={requestTimeout}
+        if events_request is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.get_events_metadata.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"events_request\"")
         self.check_token_time()
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/events/eventsMetadata?access_token={self.token}',
-                params=params, data=events_request,)
+                params=params, data=events_request, )
             return result.json()
         except requests.exceptions.RequestException as err:
             raise PostException(
@@ -927,15 +977,20 @@ class Events(Auth):
                 f"[ERROR] Не удалось получить мета данные журнала событий\n{err}"
             )
 
-    def sessions(self, events_request: dict, params):
+    def sessions(self, events_request: dict = None, params: dict = None) -> json.JSONDecoder:
         """
         Получить информацию о кассовых сменах
         Получить информацию о кассовых сменах за операционный период (день)
 
         :param events_request: запрос на получение мета данных журнала событий (POST-параметр. передается в body)
+        :param params: {"request_timeout" : "00%3A02%3A00",} не обязательно
         :return: EventsResponse Данные журнала событий
         """
         # /api/0/events/sessions?access_token={accessToken}&request_timeout={requestTimeout}
+        if events_request is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.events.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"events_request\"")
         self.check_token_time()
         try:
             result = self.session_s.post(
@@ -950,7 +1005,7 @@ class Events(Auth):
             )
 
 
-class BizAPI(Orders, Organization, Nomenclature, Cities,
-             Notices, RMSSettings, StopLists, Mobile,
-             DeliverySettings, Olaps, Events):
+class BizService(Orders, Nomenclature, Cities,
+                 Notices, RMSSettings, StopLists, Mobile,
+                 DeliverySettings, Olaps, Events):
     pass
