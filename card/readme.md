@@ -63,12 +63,13 @@
 
 **Пример названия метода получения маркера доступа:** _/api/0/auth/**`access_token`**?user_id={user_id}&user_secret={user_secret}_
 
-#### Первый запуск
-    #Обязательно при инициализации класса(объекта, сервиса) вызовите метод для получения маркера доступа
-    from card import Card
-
-    api = Card(login, password, organizationId)
-    api.access_token()
+#### Example
+    from card import CardService
+    
+    # инициализация класса 
+    api = CardService(login,password,organizationId)
+    # получаю список организаций, определяю request_timeout = 2 минутам
+    organization_info = api.list(params={"request_timeout": "00%3A02%3A00"})
 
 Каждый метод проверяет время жизни маркера доступа, если время жизни маркера прошло то будет автоматически запрошен заново.
 

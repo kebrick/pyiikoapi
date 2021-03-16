@@ -63,12 +63,13 @@
 
 **Пример названия метода получения маркера доступа:** _/api/0/auth/**`access_token`**?user_id={user_id}&user_secret={user_secret}_
 
-#### Первый запуск
-    #Обязательно при инициализации класса(объекта, сервиса) вызовите метод для получения маркера доступа
-    from biz import Biz
+#### Example
+    from biz import BizService
 
-    api = Biz(login,password,organizationId)
-    api.access_token()
+    # инициализация класса 
+    api = BizService(login,password,organizationId)
+    # получаю список курьеров организации
+    couriers = api.get_couriers()
 
 Каждый метод проверяет время жизни маркера доступа, если время жизни маркера прошло то будет автоматически запрошен заново.
 
