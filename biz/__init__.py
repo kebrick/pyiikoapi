@@ -1,2 +1,2 @@
-from biz.api import BizService
+from .api import BizService
 
