@@ -64,7 +64,7 @@
 **Пример названия метода получения маркера доступа:** _/api/0/auth/**`access_token`**?user_id={user_id}&user_secret={user_secret}_
 
 #### Example
-    from card import CardService
+    from pyiikoapi import CardService or from pyiikoapi.card import CardService
     
     # инициализация класса 
     api = CardService(login,password,organizationId)
