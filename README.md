@@ -10,7 +10,7 @@
 
 ## Read more [Biz](biz/readme.md) readme
 ### Example
-    from biz import BizService
+    from pyiikoapi import BizService or from pyiikoapi.biz import BizService
 
     # class initialization
     api = BizService(login,password,organizationId)
@@ -19,7 +19,7 @@
     couriers = api.get_couriers()
 ## Read more [Card](card/readme.md) readme
 ### Example
-    from card import CardService
+    from pyiikoapi import CardService or from pyiikoapi.card import CardService
     
     # class initialization 
     api = CardService(login,password,organizationId)
