@@ -164,7 +164,7 @@ class Auth:
                                  self.biz_access_token.__name__,
                                  f"[ERROR] Не удалось получить маркер доступа пользователя biz: \n{err}")
 
-    def api_access_token(self) -> json.JSONDecoder:
+    def api_access_token(self) -> dict:
         """
         Получить информацию о заданном пользователе biz, доступную для заданного апи логина
 
@@ -195,7 +195,7 @@ class Organization(Auth):
     картах, в списках и т.п.
     """
 
-    def list(self, params: dict = None) -> json.JSONDecoder:
+    def list(self, params: dict = None) -> dict:
         """
         Получение списка организаций
 
@@ -213,7 +213,7 @@ class Organization(Auth):
                                self.list.__name__,
                                f"[ERROR] Не удалось получить маркер доступа: \n{err}")
 
-    def organization_id(self, params: dict = None) -> json.JSONDecoder:
+    def organization_id(self, params: dict = None) -> dict:
         """
         Получение информации о заданной организации
         Возвращает поля-описатели организации
@@ -232,7 +232,7 @@ class Organization(Auth):
                                self.organization_id.__name__,
                                f"[ERROR] Не удалось получить информации о заданной организации: \n{err}")
 
-    def user_organizations(self, user_id: list = None) -> json.JSONDecoder:
+    def user_organizations(self, user_id: list = None) -> dict:
         """
         Получить списки организаций, доступных пользователям приложения
 
@@ -251,7 +251,7 @@ class Organization(Auth):
                                 f"[ERROR] Не удалось получить списки организаций, "
                                 f"доступных пользователям приложения: \n{err}")
 
-    def corporate_nutritions(self) -> json.JSONDecoder:
+    def corporate_nutritions(self) -> dict:
         """
         Получить список активных программ корпоративного питания для организации
 
@@ -289,7 +289,7 @@ class Organization(Auth):
                                self.calculate_checkin_result.__name__,
                                f"[ERROR] Не удалось рассчитать программу лояльности для заказа: \n{err}")
 
-    def get_combos_info(self) -> json.JSONDecoder:
+    def get_combos_info(self) -> dict:
         """
         Получить описание всех комбо и категорий комбо для организации
 
@@ -307,7 +307,7 @@ class Organization(Auth):
                                f"[ERROR] Не удалось получить описание всех комбо и "
                                f"категорий комбо для организации: \n{err}")
 
-    def get_manual_condition_infos(self) -> json.JSONDecoder:
+    def get_manual_condition_infos(self) -> dict:
         """
         Получить ручные условия
 
@@ -325,7 +325,7 @@ class Organization(Auth):
                                self.get_manual_condition_infos.__name__,
                                f"[ERROR] Не удалось получить ручные условия: \n{err}")
 
-    def check_and_get_combo_price(self, get_combo_price_request: dict = None) -> json.JSONDecoder:
+    def check_and_get_combo_price(self, get_combo_price_request: dict = None) -> dict:
         """
         Проверить комбо-блюдо и рассчитать его стоимость
 
@@ -399,7 +399,7 @@ class Organization(Auth):
                                 self.send_email.__name__,
                                 f"[ERROR] Не удалось отправить email от имени ресторана: \n{err}")
 
-    def corporate_nutrition_report(self, params: dict = None) -> json.JSONDecoder:
+    def corporate_nutrition_report(self, params: dict = None) -> dict:
         """
         Получить ручные условия
         :param params:
@@ -422,10 +422,28 @@ class Organization(Auth):
                                self.corporate_nutrition_report.__name__,
                                f"[ERROR] Не удалось получить ручные условия: \n{err}")
 
+    def guest_categories(self) -> dict:
+        """
+        Получить категории гостей по организации
+            Если организация включена в сеть, будут возвращены все категории сети
+
+        :return:GuestCategoryInfo[] Массив, содержащий категории гостей по организации.
+        """
+        # /api/0/organization/{organizationId}/guest_categories?access_token={accessToken}
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/organization/{self.org}/guest_categories?access_token={self.token}')
+            return result.json()
+        except requests.exceptions.RequestException as err:
+            raise GetException(self.__class__.__qualname__,
+                               self.guest_categories.__name__,
+                               f"[ERROR] Не удалось получить категории гостей по организации: \n{err}")
+
 
 class Customers(Auth):
 
-    def get_customer_by_phone(self, params: dict = None) -> json.JSONDecoder:
+    def get_customer_by_phone(self, params: dict = None) -> dict:
         """
         Получить данные гостя по его номеру телефона
 
@@ -448,7 +466,7 @@ class Customers(Auth):
                                self.get_customer_by_phone.__name__,
                                f"[ERROR] Не удалось получить данные гостя по его номеру телефона: \n{err}")
 
-    def get_customer_by_id(self, params: dict = None) -> json.JSONDecoder:
+    def get_customer_by_id(self, params: dict = None) -> dict:
         """
         Получить данные гостя по его идентификатору
         Получить информацию о госте организации по его уникальному идентификатору.
@@ -472,7 +490,7 @@ class Customers(Auth):
                                self.get_customer_by_id.__name__,
                                f"[ERROR] Не удалось получить данные гостя по его идентификатору: \n{err}")
 
-    def get_customer_by_card(self, params: dict = None) -> json.JSONDecoder:
+    def get_customer_by_card(self, params: dict = None) -> dict:
         """
         Получить данные гостя организации по его номеру карты
         Получить информацию о госте организации по его номеру карты внутри организации.
@@ -496,7 +514,7 @@ class Customers(Auth):
                                self.get_customer_by_card.__name__,
                                f"[ERROR] Не удалось получить данные гостя по его номеру карты: \n{err}")
 
-    def create_or_update(self, customer_for_import: dict = None) -> json.JSONDecoder:
+    def create_or_update(self, customer_for_import: dict = None) -> dict:
         """
         Создать гостя или обновить информацию о госте
         Метод создает гостя, если заданного телефона нет в базе или обновляет информацию о
@@ -742,7 +760,7 @@ class Customers(Auth):
                                 self.remove_from_nutrition_organization.__name__,
                                 f"[ERROR] Не удалось исключить гостя из программы корпоративного питания: \n{err}")
 
-    def get_customers_by_organization_and_by_period(self, params: dict = None) -> json.JSONDecoder:
+    def get_customers_by_organization_and_by_period(self, params: dict = None) -> dict:
         """
         Получить краткую информацию по гостям за период
             Получить краткую информацию по гостям за период, где гости были созданы или последний раз посещали ресторан.
@@ -769,7 +787,7 @@ class Customers(Auth):
                                self.get_customers_by_organization_and_by_period.__name__,
                                f"[ERROR] Не удалось получить краткую информацию по гостям за период: \n{err}")
 
-    def get_categories_by_guests(self, categories_request: dict = None) -> json.JSONDecoder:
+    def get_categories_by_guests(self, categories_request: dict = None) -> dict:
         """
         Получить категории гостей
             Получить категории гостей для запрошенных гостей.
@@ -796,7 +814,7 @@ class Customers(Auth):
                                 self.get_categories_by_guests.__name__,
                                 f"[ERROR] Не удалось получить категории гостей: \n{err}")
 
-    def get_counters_by_guests(self, counters_request: dict = None) -> json.JSONDecoder:
+    def get_counters_by_guests(self, counters_request: dict = None) -> dict:
         """
         Получить метрики гостей (кол-во, сумму заказов)
             Получить метрики гостей для запрошенных гостей, типов метрик и периодов.
@@ -826,7 +844,7 @@ class Customers(Auth):
                                 f"[ERROR] Не удалось получить метрики гостей (кол-во, сумму заказов): \n{err}")
 
     def get_balances_by_guests_and_wallet(self, guest_wallets_request: dict = None,
-                                          params: dict = None) -> json.JSONDecoder:
+                                          params: dict = None) -> dict:
         """
         Получить балансы гостей
             Получить балансы гостей для запрошенных гостей и конкретного счета программы.
@@ -892,27 +910,9 @@ class Customers(Auth):
                                f"[ERROR] Не удалось получить отчет по транзакциям гостей "
                                f"организации за период: \n{err}")
 
-    def guest_categories(self) -> json.JSONDecoder:
-        """
-        Получить категории гостей по организации
-            Если организация включена в сеть, будут возвращены все категории сети
-
-        :return:GuestCategoryInfo[] Массив, содержащий категории гостей по организации.
-        """
-        # /api/0/customers/subscribe_on_customer_balance?access_token={accessToken}&organization={organizationId}
-        self.check_token_time()
-        try:
-            result = self.session_s.get(
-                f'{self.base_url}/api/0/customers/subscribe_on_customer_balance?access_token={self.token}'
-                f'&organization={self.org}')
-            return result.json()
-        except requests.exceptions.RequestException as err:
-            raise GetException(self.__class__.__qualname__,
-                               self.guest_categories.__name__,
-                               f"[ERROR] Не удалось получить категории гостей по организации: \n{err}")
 
     def subscribe_on_customer_balance(self,
-                                      wallet_balance_changed_subscription_request: dict = None) -> json.JSONDecoder:
+                                      wallet_balance_changed_subscription_request: dict = None) -> dict:
         """
         Подписаться на уведомления об изменении балансов пользователей
             Создает подписку (обновляет пароль у существующей) на отправку POST-уведомлений при
@@ -969,7 +969,7 @@ class Customers(Auth):
                                 f"[ERROR] Не удалось удалить подписку на уведомления "
                                 f"об изменении балансов пользователей: \n{err}")
 
-    def get_subscriptions_on_customer_balance(self) -> json.JSONDecoder:
+    def get_subscriptions_on_customer_balance(self) -> dict:
         """
         Получить все подписки об изменении баланса, созданные api-пользователем
 
@@ -987,7 +987,7 @@ class Customers(Auth):
                                self.get_subscriptions_on_customer_balance.__name__,
                                f"[ERROR] Не удалось получить категории гостей по организации: \n{err}")
 
-    def create_or_update_guest_category(self, guest_category_info: dict = None) -> json.JSONDecoder:
+    def create_or_update_guest_category(self, guest_category_info: dict = None) -> dict:
         """
         Создать категорию гостей или обновить существующую
             Создает категорию гостей для организации или обновляет уже существующую.
@@ -1012,7 +1012,7 @@ class Customers(Auth):
                                 self.create_or_update_guest_category.__name__,
                                 f"[ERROR] Не удалось создать категорию гостей или обновить существующую: \n{err}")
 
-    def programs(self, params: dict = None) -> json.JSONDecoder:
+    def programs(self, params: dict = None) -> dict:
         """
         Получить программы по организации/сети
 
@@ -1032,7 +1032,7 @@ class Customers(Auth):
                                self.programs.__name__,
                                f"[ERROR] Не удалось получить программы по организации/сети: \n{err}")
 
-    def create_marketing_campaign(self, marketing_campaign_info: dict = None, params: dict = None) -> json.JSONDecoder:
+    def create_marketing_campaign(self, marketing_campaign_info: dict = None, params: dict = None) -> dict:
         """
         Создать маркетинговую акцию
             (метод предназначен для импорта акции, настроенной через iikobiz)
@@ -1063,7 +1063,7 @@ class Customers(Auth):
                                 self.create_marketing_campaign.__name__,
                                 f"[ERROR] Не удалось создать маркетинговую акцию: \n{err}")
 
-    def update_marketing_campaign(self, marketing_campaign_info: dict = None, params: dict = None) -> json.JSONDecoder:
+    def update_marketing_campaign(self, marketing_campaign_info: dict = None, params: dict = None) -> dict:
         """
         Обновить маркетинговую акцию
             (метод предназначен для импорта акции, настроенной через iikobiz)
@@ -1094,7 +1094,7 @@ class Customers(Auth):
                                 self.update_marketing_campaign.__name__,
                                 f"[ERROR] Не удалось обновить маркетинговую акцию: \n{err}")
 
-    def create_program(self, extended_corporate_nutrition_info: dict = None, params: dict = None) -> json.JSONDecoder:
+    def create_program(self, extended_corporate_nutrition_info: dict = None, params: dict = None) -> dict:
         """
        Создать программу
             (метод предназначен для импорта акции, настроенной через iikobiz)
@@ -1125,7 +1125,7 @@ class Customers(Auth):
                                 self.create_program.__name__,
                                 f"[ERROR] Не удалось создать программу: \n{err}")
 
-    def update_program(self, extended_corporate_nutrition_info: dict = None, params: dict = None) -> json.JSONDecoder:
+    def update_program(self, extended_corporate_nutrition_info: dict = None, params: dict = None) -> dict:
         """
        Обновить программу
             (метод предназначен для импорта акции, настроенной через iikobiz)
