@@ -122,6 +122,143 @@ class Orders(Auth):
     Сервис для работы с разделом заказов iiko Biz Api
     Все методы возвращают чистый json
     """
+    def add(self, order_request: dict = None, request_timeout: str = "00%3A02%3A00") -> dict:
+        """
+        Создание заказа
+
+        :param order_request: Запрос на создание заказа
+        :param request_timeout: Таймаут для выполнения запроса. default="00%3A02%3A00"
+        :return: orderInfo Информация о заказе
+        """
+        # /api/0/orders/add?access_token={accessToken}&request_timeout={requestTimeout}
+        if order_request is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.add.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"order_request\"")
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/orders/add?access_token={self.token}&request_timeout={request_timeout}',
+                json=order_request)
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise GetException(self.__class__.__qualname__,
+                               self.add.__name__,
+                               f"[ERROR] Не удалось cоздать заказ\n{err}")
+
+
+
+
+    def info(self, order_id: str = None, request_timeout: str = "00%3A02%3A00") -> dict:
+        """
+        Информация о заказе
+
+        :param order_id: Идентификатор заказа
+        :param request_timeout: Таймаут для выполнения запроса. default="00%3A02%3A00"
+        :return: orderInfo Информация о заказе
+        """
+        # /api/0/orders/info?access_token={accessToken}&organization={organizationId}&order={orderId}&request_timeout={requestTimeout}
+        if order_id is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.info.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"order_id\"")
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/orders/info?access_token={self.token}&organization={self.org}&order={order_id}&request_timeout={request_timeout}',)
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise GetException(self.__class__.__qualname__,
+                               self.info.__name__,
+                               f"[ERROR] Не удалось получить информация о заказе\n{err}")
+
+
+    def check_create(self, order_request: dict = None, request_timeout: str = "00%3A02%3A00") -> dict:
+        """
+        Проверить возможность создания заказа
+
+        :param order_request: Запрос на создание заказа
+        :param request_timeout: Таймаут для выполнения запроса. default="00%3A02%3A00"
+        :return: orderCheckCreationResult Результат проверки возможности создания доставки
+        """
+        # /api/0/orders/checkCreate?access_token={accessToken}&request_timeout={requestTimeout}
+        if order_request is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.check_create.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"order_request\"")
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/orders/checkCreate?access_token={self.token}&request_timeout={request_timeout}',
+                json=order_request)
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise GetException(self.__class__.__qualname__,
+                               self.check_create.__name__,
+                               f"[ERROR] Не удалось проверить возможность создания заказа\n{err}")
+
+
+    def check_address(self, address: dict = None, request_timeout: str = "00%3A02%3A00") -> dict:
+        """
+        Проверить осуществимость доставки по указанному адресу
+
+        :param address: Запрос на создание заказа  {"city": "Москва", "street": "Планетарная","home": "1"}
+        :param request_timeout: Таймаут для выполнения запроса. default="00%3A02%3A00"
+        :return: addressCheckResult: Результат проверки возможности осуществления доставки по указанному адресу
+        """
+        # /api/0/orders/checkAddress?access_token={accessToken}&request_timeout={requestTimeout}&organizationId={organizationId}
+        if address is None:
+            raise ParamSetException(self.__class__.__qualname__,
+                                    self.check_address.__name__,
+                                    f"[ERROR] Не присвоен обязательный параметр: \"address\"")
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/orders/checkAddress?access_token={self.token}&request_timeout={request_timeout}&organizationId={self.org}',
+                json=address)
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise GetException(self.__class__.__qualname__,
+                               self.check_address.__name__,
+                               f"[ERROR] Не удалось проверить осуществимость доставки по указанному адресу\n{err}")
+
+
+    def delivery_orders(self, date_from, date_to, delivery_status: str = None, delivery_terminal_id:str = None, request_timeout: str = "00%3A02%3A00") -> dict:
+        """
+        Список доставок в указанном интервале времени
+        :param date_from:* Дата начала интервала (включительно)
+        :param date_to:* Дата окончания интервала (включительно)
+        :param delivery_status: Статус доставки (регистронезависимый). Должно принимать одно из следующих значений:(● NEW ● WAITING ● ON_WAY ● CLOSED ● CANCELLED ● DELIVERED ● UNCONFIRMED)
+        :param delivery_terminal_id: Идентификатор терминала доставки
+        :param request_timeout: Таймаут для выполнения запроса. default="00%3A02%3A00"
+        :return: addressCheckResult: Результат проверки возможности осуществления доставки по указанному адресу
+        """
+        # /api/0/orders/deliveryOrders?access_token={accessToken}&organization={organizationId}&dateFrom={dateFrom}&dateTo={dateTo}&deliveryStatus={deliveryStatus}&deliveryTerminalId={deliveryTerminalId}&request_timeout={requestTimeout}
+        params = {"dateFrom": date_from, "dateTo": date_to,}
+        if delivery_status is not None:
+            params["deliveryStatus"] = delivery_status
+        if delivery_terminal_id is not None:
+            params['deliveryTerminalId'] = delivery_terminal_id
+
+        self.check_token_time()
+        try:
+            result = self.session_s.get(
+                f'{self.base_url}/api/0/orders/checkAddress?access_token={self.token}&request_timeout={request_timeout}&organizationId={self.org}',
+                params=params)
+            return result.json()
+
+        except requests.exceptions.RequestException as err:
+            raise GetException(self.__class__.__qualname__,
+                               self.delivery_orders.__name__,
+                               f"[ERROR] Не удалось получить информации о всех доставках в заданном временном интервале\n{err}")
+
+
+
+
 
     def get_courier_orders(self, params: dict = None) -> json:
         """
@@ -139,7 +276,7 @@ class Orders(Auth):
             result = self.session_s.get(
                 f'{self.base_url}/api/0/orders/get_courier_orders?access_token={self.token}'
                 f'&organization={self.org}',
-                params=params)
+                json=params)
             return result.json()
 
         except requests.exceptions.RequestException as err:
@@ -147,45 +284,6 @@ class Orders(Auth):
                                self.get_courier_orders.__name__,
                                f"[ERROR] Не удалось получить активные заказы курьера\n{err}")
 
-    def delivery_orders(self, params: dict = None) -> json:
-        """
-        Получение информации о всех доставках в заданном временном интервале.
-
-        :param params: {"dateFrom": "","dateTo" : "", "deliveryStatus" : "", "deliveryTerminalId" : "",
-            "request_timeout" : "00%3A02%3A00"}
-        "dateFrom" : string : Дата начала интервала (включительно).
-        "dateTo" : string : Дата окончания интервала (включительно).
-        "deliveryStatus" : string : Статус доставки (регистронезависимый).
-        Должно принимать одно из следующих значений:
-        ● NEW
-        ● WAITING
-        ● ON_WAY
-        ● CLOSED
-        ● CANCELLED
-        ● DELIVERED
-        ● UNCONFIRMED
-        "deliveryTerminalId" : string : Идентификатор терминала доставки.
-        "requestTimeout" : string : Таймаут для выполнения запроса.
-        :return: DeliveryOrdersResponse Информация о заказах
-        """
-        # /api/0/orders/deliveryOrders?access_token={accessToken}&organization={organizationId}
-        # &dateFrom={dateFrom}&dateTo={dateTo}&deliveryStatus={deliveryStatus}
-        # &deliveryTerminalId={deliveryTerminalId}&request_timeout={requestTimeout}
-        if params is None:
-            raise ParamSetException(self.__class__.__qualname__,
-                                    self.delivery_orders.__name__,
-                                    f"[ERROR] Не присвоен обязательный параметр: \"params\"")
-        self.check_token_time()
-        try:
-            result = self.session_s.get(
-                f'{self.base_url}/api/0/orders/deliveryOrders?access_token={self.token}&organization={self.org}',
-                params=params)
-            return result.json()
-
-        except requests.exceptions.RequestException as err:
-            raise GetException(self.__class__.__qualname__,
-                               self.delivery_orders.__name__,
-                               f"[ERROR] Не удалось получить все заказы \n{err}")
 
     def set_order_delivered(self, set_order_delivered_request: dict = None, params: dict = None):
         """
@@ -206,7 +304,7 @@ class Orders(Auth):
                 f'{self.base_url}/api/0/orders/set_order_delivered?access_token={self.token}&organization='
                 f'{self.org}',
                 params=params,
-                data=set_order_delivered_request, )
+                json=set_order_delivered_request, )
             return result.status_code
 
         except requests.exceptions.RequestException as err:
@@ -381,7 +479,7 @@ class Notices(Auth):
             result = self.session_s.post(
                 f'{self.base_url}/api/0/regions/regions?access_token={self.token}&organization={self.org}',
                 params=params,
-                data=notices_request)
+                json=notices_request)
             return result.json()
 
         except requests.exceptions.RequestException as err:
@@ -623,7 +721,7 @@ class Mobile(Auth):
             result = self.session_s.post(
                 f'{self.base_url}/api/0/mobile/signin?access_token={self.token}',
                 params=params,
-                data=mobile_login_request_dto
+                json=mobile_login_request_dto
             )
             return result.json()
 
@@ -660,7 +758,7 @@ class Mobile(Auth):
             result = self.session_s.post(
                 f'{self.base_url}/api/0/mobile/sync?access_token={self.token}',
                 params=params,
-                data=send_update_dto
+                json=send_update_dto
             )
             return result.json()
 
@@ -852,7 +950,7 @@ class Olaps(Auth):
             result = self.session_s.post(
                 f'{self.base_url}/api/0/olaps/olap?access_token={self.token}',
                 params=params,
-                data=olap_report_request, )
+                json=olap_report_request, )
             return result.json()
 
         except requests.exceptions.RequestException as err:
@@ -907,7 +1005,7 @@ class Olaps(Auth):
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/olaps/olapByPreset?access_token={self.token}&organizationId={self.org}',
-                params=params, data=preset_olap_report_request)
+                params=params, json=preset_olap_report_request)
             return result.json()
 
         except requests.exceptions.RequestException as err:
@@ -941,7 +1039,7 @@ class Events(Auth):
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/events/events?access_token={self.token}',
-                params=params, data=events_request)
+                params=params, json=events_request)
             return result.json()
 
         except requests.exceptions.RequestException as err:
@@ -968,7 +1066,7 @@ class Events(Auth):
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/events/eventsMetadata?access_token={self.token}',
-                params=params, data=events_request, )
+                params=params, json=events_request, )
             return result.json()
         except requests.exceptions.RequestException as err:
             raise PostException(
@@ -995,7 +1093,7 @@ class Events(Auth):
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/events/sessions?access_token={self.token}',
-                params=params, data=events_request, )
+                params=params, json=events_request, )
             return result.json()
         except requests.exceptions.RequestException as err:
             raise PostException(
