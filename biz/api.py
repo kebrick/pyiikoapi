@@ -137,13 +137,13 @@ class Orders(Auth):
                                     f"[ERROR] Не присвоен обязательный параметр: \"order_request\"")
         self.check_token_time()
         try:
-            result = self.session_s.get(
+            result = self.session_s.post(
                 f'{self.base_url}/api/0/orders/add?access_token={self.token}&request_timeout={request_timeout}',
                 json=order_request)
             return result.json()
 
         except requests.exceptions.RequestException as err:
-            raise GetException(self.__class__.__qualname__,
+            raise PostException(self.__class__.__qualname__,
                                self.add.__name__,
                                f"[ERROR] Не удалось cоздать заказ\n{err}")
 
@@ -190,13 +190,13 @@ class Orders(Auth):
                                     f"[ERROR] Не присвоен обязательный параметр: \"order_request\"")
         self.check_token_time()
         try:
-            result = self.session_s.get(
+            result = self.session_s.post(
                 f'{self.base_url}/api/0/orders/checkCreate?access_token={self.token}&request_timeout={request_timeout}',
                 json=order_request)
             return result.json()
 
         except requests.exceptions.RequestException as err:
-            raise GetException(self.__class__.__qualname__,
+            raise PostException(self.__class__.__qualname__,
                                self.check_create.__name__,
                                f"[ERROR] Не удалось проверить возможность создания заказа\n{err}")
 
@@ -216,13 +216,13 @@ class Orders(Auth):
                                     f"[ERROR] Не присвоен обязательный параметр: \"address\"")
         self.check_token_time()
         try:
-            result = self.session_s.get(
+            result = self.session_s.post(
                 f'{self.base_url}/api/0/orders/checkAddress?access_token={self.token}&request_timeout={request_timeout}&organizationId={self.org}',
                 json=address)
             return result.json()
 
         except requests.exceptions.RequestException as err:
-            raise GetException(self.__class__.__qualname__,
+            raise PostException(self.__class__.__qualname__,
                                self.check_address.__name__,
                                f"[ERROR] Не удалось проверить осуществимость доставки по указанному адресу\n{err}")
 
