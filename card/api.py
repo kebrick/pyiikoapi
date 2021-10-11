@@ -243,7 +243,7 @@ class Organization(Auth):
         self.check_token_time()
         try:
             result = self.session_s.post(
-                f'{self.base_url}applicationMarket/usersOrganizations?api_access_token={self.token}', data=user_id)
+                f'{self.base_url}applicationMarket/usersOrganizations?api_access_token={self.token}', json=user_id)
             return result.json()
         except requests.exceptions.RequestException as err:
             raise PostException(self.__class__.__qualname__,
@@ -342,7 +342,7 @@ class Organization(Auth):
             result = self.session_s.post(
                 f'{self.base_url}/api/0/orders/check_and_get_combo_price?access_token={self.token}'
                 f'&organization={self.org}',
-                data=get_combo_price_request, )
+                json=get_combo_price_request, )
             return result.json()
         except requests.exceptions.RequestException as err:
             raise PostException(self.__class__.__qualname__,
@@ -366,7 +366,7 @@ class Organization(Auth):
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/organization/{self.org}/send_sms?access_token={self.token}',
-                data=send_sms_request)
+                json=send_sms_request)
             return result
         except requests.exceptions.RequestException as err:
             raise PostException(self.__class__.__qualname__,
@@ -392,7 +392,7 @@ class Organization(Auth):
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/organization/{self.org}/send_email?access_token={self.token}',
-                data=send_email_request)
+                json=send_email_request)
             return result
         except requests.exceptions.RequestException as err:
             raise PostException(self.__class__.__qualname__,
@@ -443,11 +443,12 @@ class Organization(Auth):
 
 class Customers(Auth):
 
-    def get_customer_by_phone(self, params: dict = None) -> dict:
+    def get_customer_by_phone(self, params: dict = None, timeout = 5) -> dict:
         """
         Получить данные гостя по его номеру телефона
 
         :param params: {"phone" : "+79999999999",} телефон пользователя
+        :param timeout: timeout for request in second (5 or 5.05)
         :return: OrganizationGuestInfo Данные гостя (включая баланс)
         """
         # /api/0/customers/get_customer_by_phone?access_token={accessToken}&organization={organization}&phone={userPhone}
@@ -459,19 +460,20 @@ class Customers(Auth):
         try:
             result = self.session_s.get(
                 f'{self.base_url}/api/0/customers/get_customer_by_phone?access_token={self.token}'
-                f'&organization={self.org}', params=params)
+                f'&organization={self.org}', params=params, timeout=timeout)
             return result.json()
         except requests.exceptions.RequestException as err:
             raise GetException(self.__class__.__qualname__,
                                self.get_customer_by_phone.__name__,
                                f"[ERROR] Не удалось получить данные гостя по его номеру телефона: \n{err}")
 
-    def get_customer_by_id(self, params: dict = None) -> dict:
+    def get_customer_by_id(self, params: dict = None, timeout = 5) -> dict:
         """
         Получить данные гостя по его идентификатору
         Получить информацию о госте организации по его уникальному идентификатору.
 
         :param params: {"id": "userId"} Идентификатор гостя
+        :param timeout: timeout for request in second (5 or 5.05)
         :return: OrganizationGuestInfo Данные гостя (включая баланс)
         """
         # /api/0/customers/get_customer_by_id?access_token={accessToken}&organization={organization}&id={userId}
@@ -483,19 +485,20 @@ class Customers(Auth):
         try:
             result = self.session_s.get(
                 f'{self.base_url}/api/0/customers/get_customer_by_id?access_token={self.token}&organization={self.org}',
-                params=params)
+                params=params, timeout=timeout)
             return result.json()
         except requests.exceptions.RequestException as err:
             raise GetException(self.__class__.__qualname__,
                                self.get_customer_by_id.__name__,
                                f"[ERROR] Не удалось получить данные гостя по его идентификатору: \n{err}")
 
-    def get_customer_by_card(self, params: dict = None) -> dict:
+    def get_customer_by_card(self, params: dict = None, timeout = 5) -> dict:
         """
         Получить данные гостя организации по его номеру карты
         Получить информацию о госте организации по его номеру карты внутри организации.
 
         :param params: {"card": "cardNumber"} Номер карты гостя
+        :param timeout: timeout for request in second (5 or 5.05)
         :return: OrganizationGuestInfo Данные гостя (включая баланс)
         """
         # /api/0/customers/get_customer_by_card?access_token={accessToken}&organization={organization}&card={cardNumber}
@@ -507,14 +510,14 @@ class Customers(Auth):
         try:
             result = self.session_s.get(
                 f'{self.base_url}/api/0/customers/get_customer_by_card?access_token={self.token}'
-                f'&organization={self.org}', params=params)
+                f'&organization={self.org}', params=params, timeout=timeout)
             return result.json()
         except requests.exceptions.RequestException as err:
             raise GetException(self.__class__.__qualname__,
                                self.get_customer_by_card.__name__,
                                f"[ERROR] Не удалось получить данные гостя по его номеру карты: \n{err}")
 
-    def create_or_update(self, customer_for_import: dict = None) -> dict:
+    def create_or_update(self, customer_for_import: dict = None, timeout=15) -> dict:
         """
         Создать гостя или обновить информацию о госте
         Метод создает гостя, если заданного телефона нет в базе или обновляет информацию о
@@ -523,6 +526,7 @@ class Customers(Auth):
         в запросе на обновление, то метод не изменяет значение данного поля у гостя
 
         :param customer_for_import: CustomerForImport Данные пользователя (здесь поле id является обязательным)
+        :param timeout: timeout for request in second
         :return: Идентификатор гостя
         """
         # /api/0/customers/create_or_update?access_token={accessToken}&organization={organizationId}
@@ -534,7 +538,7 @@ class Customers(Auth):
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/customers/create_or_update?access_token={self.token}&organization={self.org}',
-                data=customer_for_import, )
+                json=customer_for_import,timeout=timeout )
             return result.json()
         except requests.exceptions.RequestException as err:
             raise PostException(self.__class__.__qualname__,
@@ -553,7 +557,7 @@ class Customers(Auth):
         # /api/0/customers/{customerId}/add_category?access_token={accessToken}&organization={organizationId}&categoryId={categoryId}
         if customer_id is None or category_id is None:
             raise ParamSetException(self.__class__.__qualname__,
-                                    self.create_or_update.__name__,
+                                    self.add_category.__name__,
                                     f"[ERROR] Не присвоен обязательный параметр: "
                                     f"\"customer_id\" или \"category_id\"")
         self.check_token_time()
@@ -616,7 +620,7 @@ class Customers(Auth):
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/customers/{customer_id}/add_card?access_token={self.token}'
-                f'&organization={self.org}', data=add_magnet_card_request, )
+                f'&organization={self.org}', json=add_magnet_card_request, )
             return result
         except requests.exceptions.RequestException as err:
             raise PostException(self.__class__.__qualname__,
@@ -670,7 +674,7 @@ class Customers(Auth):
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/customers/refill_balance?access_token={self.token}',
-                data=api_change_balance_request, )
+                json=api_change_balance_request, )
             return result
         except requests.exceptions.RequestException as err:
             raise PostException(self.__class__.__qualname__,
@@ -695,7 +699,7 @@ class Customers(Auth):
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/customers/withdraw_balance?access_token={self.token}',
-                data=api_change_balance_request, )
+                json=api_change_balance_request, )
             return result
         except requests.exceptions.RequestException as err:
             raise PostException(self.__class__.__qualname__,
@@ -807,7 +811,7 @@ class Customers(Auth):
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/customers/get_categories_by_guests?access_token={self.token}'
-                f'&organization={self.org}', data=categories_request)
+                f'&organization={self.org}', json=categories_request)
             return result.json()
         except requests.exceptions.RequestException as err:
             raise PostException(self.__class__.__qualname__,
@@ -836,7 +840,7 @@ class Customers(Auth):
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/customers/get_counters_by_guests?access_token={self.token}'
-                f'&organization={self.org}', data=counters_request)
+                f'&organization={self.org}', json=counters_request)
             return result.json()
         except requests.exceptions.RequestException as err:
             raise PostException(self.__class__.__qualname__,
@@ -871,7 +875,7 @@ class Customers(Auth):
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/customers/get_balances_by_guests_and_wallet?access_token={self.token}'
-                f'&organization={self.org}', params=params, data=guest_wallets_request)
+                f'&organization={self.org}', params=params, json=guest_wallets_request)
             return result.json()
         except requests.exceptions.RequestException as err:
             raise PostException(self.__class__.__qualname__,
@@ -936,7 +940,7 @@ class Customers(Auth):
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/customers/subscribe_on_customer_balance?access_token={self.token}'
-                f'&organization={self.org}', data=wallet_balance_changed_subscription_request)
+                f'&organization={self.org}', json=wallet_balance_changed_subscription_request)
             return result.json()
         except requests.exceptions.RequestException as err:
             raise PostException(self.__class__.__qualname__,
@@ -1005,7 +1009,7 @@ class Customers(Auth):
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/organization/{self.org}/create_or_update_guest_category?'
-                f'access_token={self.token}', data=guest_category_info)
+                f'access_token={self.token}', json=guest_category_info)
             return result.json()
         except requests.exceptions.RequestException as err:
             raise PostException(self.__class__.__qualname__,
@@ -1056,7 +1060,7 @@ class Customers(Auth):
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/create_marketing_campaign?access_token={self.token}&organization={self.org}',
-                params=params, data=marketing_campaign_info)
+                params=params, json=marketing_campaign_info)
             return result.json()
         except requests.exceptions.RequestException as err:
             raise PostException(self.__class__.__qualname__,
@@ -1087,7 +1091,7 @@ class Customers(Auth):
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/organization/update_marketing_campaign?access_token={self.token}&'
-                f'organization={self.org}', params=params, data=marketing_campaign_info)
+                f'organization={self.org}', params=params, json=marketing_campaign_info)
             return result.json()
         except requests.exceptions.RequestException as err:
             raise PostException(self.__class__.__qualname__,
@@ -1118,7 +1122,7 @@ class Customers(Auth):
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/organization/create_program?access_token={self.token}&organization={self.org}',
-                params=params, data=extended_corporate_nutrition_info)
+                params=params, json=extended_corporate_nutrition_info)
             return result.json()
         except requests.exceptions.RequestException as err:
             raise PostException(self.__class__.__qualname__,
@@ -1149,7 +1153,7 @@ class Customers(Auth):
         try:
             result = self.session_s.post(
                 f'{self.base_url}/api/0/organization/update_program?access_token={self.token}&organization={self.org}',
-                params=params, data=extended_corporate_nutrition_info)
+                params=params, json=extended_corporate_nutrition_info)
             return result.json()
         except requests.exceptions.RequestException as err:
             raise PostException(self.__class__.__qualname__,
