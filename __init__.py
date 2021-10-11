@@ -4,6 +4,6 @@ from .card import CardService
 # import card
 NAME = "pyiikoapi"
 __author__ = 'kebrick'
-__version__ = '0.0.2'
+__version__ = '0.0.10'
 __email__ = 'ruban.kebr@gmail.com'
 
