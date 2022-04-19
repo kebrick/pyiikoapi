@@ -276,7 +276,7 @@ class Orders(Auth):
             result = self.session_s.get(
                 f'{self.base_url}/api/0/orders/get_courier_orders?access_token={self.token}'
                 f'&organization={self.org}',
-                json=params)
+                params=params)
             return result.json()
 
         except requests.exceptions.RequestException as err:
@@ -305,7 +305,7 @@ class Orders(Auth):
                 f'{self.org}',
                 params=params,
                 json=set_order_delivered_request, )
-            return result.status_code
+            return result
 
         except requests.exceptions.RequestException as err:
             raise PostException(
